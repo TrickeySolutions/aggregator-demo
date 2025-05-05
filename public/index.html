@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Insurance Quote Platform</title>
+    <link rel="stylesheet" href="/govuk-frontend/govuk.min.css">
+    <style>
+        .govuk-header {
+            background-color: #0b0c0c; /* Back to GOV.UK black */
+            border-bottom: 10px solid #1d70b8; /* Blue border */
+        }
+
+        .govuk-header__container {
+            border-bottom: none;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .govuk-header__logo {
+            width: auto;
+            padding-right: 30px;
+        }
+
+        .govuk-header__link--homepage {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+
+        .govuk-header__logotype-crown {
+            margin-right: 0;
+            filter: brightness(0) invert(1); /* Makes the mini logo white */
+            width: 36px;
+            height: auto; /* Preserve aspect ratio */
+            object-fit: contain;
+        }
+
+        .govuk-header__logotype-text {
+            filter: none; /* Remove filter to keep original colors */
+            height: 36px;
+            width: auto; /* Maintain aspect ratio */
+        }
+
+        .govuk-header__content {
+            padding-left: 30px;
+            border-left: 1px solid #ffffff40; /* Semi-transparent white border */
+        }
+
+        .govuk-header__link--service-name {
+            color: #ffffff !important; /* White text */
+            font-weight: 700;
+        }
+
+        .govuk-header__link:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 48.0625em) {
+            .govuk-header__logotype-text {
+                display: none;
+            }
+            
+            .govuk-header__content {
+                padding-left: 15px;
+            }
+            
+            .govuk-header__link--service-name {
+                font-size: 24px !important;
+            }
+        }
+
+        /* Add custom styles for progress summary */
+        .app-progress-summary {
+            border: 1px solid #b1b4b6;
+            padding: 20px;
+        }
+
+        .app-progress-summary__list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .app-progress-summary__item {
+            margin-bottom: 20px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .app-progress-summary__item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            border: 2px solid #1d70b8;
+            border-radius: 50%;
+        }
+
+        .app-progress-summary__item--completed::before {
+            background: #1d70b8;
+        }
+
+        .app-progress-summary__item--current::before {
+            background: #fff;
+        }
+
+        .app-progress-summary__status {
+            display: block;
+            font-size: 16px;
+            color: #505a5f;
+            margin-bottom: 5px;
+        }
+
+        .app-progress-summary__button {
+            border: 0;
+            padding: 0;
+            background: none;
+            color: #1d70b8;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 19px;
+            font-weight: bold;
+        }
+
+        .app-progress-summary__tasks {
+            list-style: none;
+            padding-left: 0;
+            margin: 10px 0 0;
+            font-size: 16px;
+            color: #505a5f;
+        }
+
+        /* Add MOJ progress bar styles */
+        .moj-progress-bar {
+            margin-bottom: 40px;
+        }
+
+        .moj-progress-bar__list {
+            display: flex;
+            justify-content: space-between;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+    </style>
+</head>
+<body class="govuk-template__body">
+    <script>
+        document.body.className = document.body.className + ' govuk-frontend-supported';
+    </script>
+    <script type="module">
+        import { initAll } from '/govuk-frontend/govuk.min.js';
+        initAll();
+    </script>
+    <script src="/js/app.js" defer></script>
+
+    <header class="govuk-header" role="banner" data-module="govuk-header">
+        <div class="govuk-header__container govuk-width-container">
+            <div class="govuk-header__logo">
+                <a href="/" class="govuk-header__link govuk-header__link--homepage">
+                    <img src="https://trickey.solutions/media/gg3i2lr1/minime.png" 
+                         alt="Trickey Solutions Mini Logo" 
+                         class="govuk-header__logotype-crown"
+                         width="36" height="36">
+                    <img src="https://trickey.solutions/media/1kggv10k/trickeysolutionshorizontaltextlogo.png"
+                         alt="Trickey Solutions"
+                         class="govuk-header__logotype-text"
+                         height="36">
+                </a>
+            </div>
+            <div class="govuk-header__content">
+                <a href="/" class="govuk-header__link govuk-header__link--service-name govuk-!-font-size-36">
+                    Cyber Insurance Platform
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper" id="main-content" role="main">
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-two-thirds">
+                    <h1 class="govuk-heading-xl">Get cyber insurance quotes</h1>
+                    
+                    <div class="govuk-grid-row">
+                        <div class="govuk-grid-column-one-half">
+                            <div class="govuk-card">
+                                <h2 class="govuk-heading-m">
+                                    <a href="/quote/new" class="govuk-link">Get a new quote</a>
+                                </h2>
+                                <p class="govuk-body">Start a new cyber insurance quote</p>
+                            </div>
+                        </div>
+                        
+                        <div class="govuk-grid-column-one-half">
+                            <div class="govuk-card">
+                                <h2 class="govuk-heading-m">
+                                    <a href="/customer/login" class="govuk-link">Sign in</a>
+                                </h2>
+                                <p class="govuk-body">View your saved quotes and account</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="govuk-footer" role="contentinfo">
+        <div class="govuk-width-container">
+            <div class="govuk-footer__meta">
+                <div class="govuk-footer__meta-item govuk-footer__meta-item--grow">
+                    <div class="govuk-footer__meta-custom">
+                        Demo application - Not a real service
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html> 
