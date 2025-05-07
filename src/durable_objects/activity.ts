@@ -17,8 +17,8 @@ interface ActivityState {
     organisation?: {
       name?: string;
       industry?: string;
-      revenue?: number;
-      employees?: number;
+      revenue?: '0-50k' | '50k-100k' | '100k-500k' | '500k-1m' | '1m-10m' | '10m-100m' | '100m-1b' | 'over-1b';
+      employees?: string;
     };
     security?: {
       backupFrequency?: string;
