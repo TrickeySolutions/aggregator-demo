@@ -25,6 +25,46 @@ class QuoteForm {
         this.setupNavigation();
         this.setupValidation();
         this.setupLoadingIndicator();
+
+        // Add draft handling
+        document.querySelectorAll('[data-action="save-draft"], [data-action="submit"]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const action = btn.dataset.action;
+                try {
+                    this.showLoading(true);
+                    
+                    // Send appropriate message via WebSocket
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: action === 'save-draft' ? 'save_draft' : 'submit'
+                        }));
+
+                        // Wait for confirmation
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+                            const handler = (event) => {
+                                const data = JSON.parse(event.data);
+                                if (data.type === 'state_update' && 
+                                    data.state.status === (action === 'save-draft' ? 'draft' : 'completed')) {
+                                    clearTimeout(timeout);
+                                    this.ws.removeEventListener('message', handler);
+                                    resolve(data);
+                                }
+                            };
+                            this.ws.addEventListener('message', handler);
+                        });
+
+                        // Redirect to home page
+                        window.location.href = '/';
+                    }
+                } catch (error) {
+                    console.error('Failed to save/submit:', error);
+                    this.showError('Save Error', 'Failed to save your changes. Please try again.');
+                } finally {
+                    this.showLoading(false);
+                }
+            });
+        });
     }
 
     setupLoadingIndicator() {

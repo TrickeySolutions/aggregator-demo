@@ -11,7 +11,7 @@
 import { RiskProfile } from '../types/risk-profile';
 
 interface ActivityState {
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: 'pending' | 'in_progress' | 'draft' | 'completed' | 'failed';
   currentSection: 'organisation' | 'security' | 'coverage' | 'review';
   formData: {
     organisation?: {
@@ -126,6 +126,24 @@ export class ActivityDO {
               state: this.activityState
             });
 
+            this.sessions.forEach(ws => {
+              try {
+                ws.send(update);
+              } catch (err) {
+                this.sessions.delete(ws);
+              }
+            });
+          } else if (data.type === 'save_draft') {
+            // Handle save draft action
+            this.activityState.status = 'draft';
+            await this.state.storage.put('state', this.activityState);
+            
+            // Notify all clients
+            const update = JSON.stringify({
+              type: 'state_update',
+              state: this.activityState
+            });
+            
             this.sessions.forEach(ws => {
               try {
                 ws.send(update);
