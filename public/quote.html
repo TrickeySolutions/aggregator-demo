@@ -336,10 +336,20 @@
                         <label class="govuk-label" for="revenue">
                             Annual revenue
                         </label>
-                        <div class="govuk-input__wrapper">
-                            <div class="govuk-input__prefix" aria-hidden="true">£</div>
-                            <input class="govuk-input govuk-input--width-10" id="revenue" name="revenue" type="number" required>
+                        <div class="govuk-hint">
+                            Select your organisation's annual revenue range
                         </div>
+                        <select class="govuk-select" id="revenue" name="revenue" required>
+                            <option value="">Choose annual revenue</option>
+                            <option value="0-50k">Up to £50,000</option>
+                            <option value="50k-100k">£50,000 to £100,000</option>
+                            <option value="100k-500k">£100,000 to £500,000</option>
+                            <option value="500k-1m">£500,000 to £1 million</option>
+                            <option value="1m-10m">£1 million to £10 million</option>
+                            <option value="10m-100m">£10 million to £100 million</option>
+                            <option value="100m-1b">£100 million to £1 billion</option>
+                            <option value="over-1b">Over £1 billion</option>
+                        </select>
                     </div>
 
                     <div class="govuk-form-group">
