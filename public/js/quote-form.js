@@ -161,12 +161,28 @@ class QuoteForm {
             if (!form) return;
 
             Object.entries(data).forEach(([key, value]) => {
+                // Handle checkbox groups
+                if (Array.isArray(value)) {
+                    // Clear all checkboxes first
+                    form.querySelectorAll(`input[name="${key}"]`).forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    // Check the ones in the value array
+                    value.forEach(val => {
+                        const checkbox = form.querySelector(`input[name="${key}"][value="${val}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                    return;
+                }
+
                 const input = form.querySelector(`[name="${key}"]`);
                 if (!input) return;
 
                 if (input.type === 'checkbox') {
                     input.checked = value;
-                    // Trigger change event for conditionals
                     input.dispatchEvent(new Event('change'));
                 } else if (input.type === 'radio') {
                     const radio = form.querySelector(`input[name="${key}"][value="${value}"]`);
@@ -176,6 +192,82 @@ class QuoteForm {
                     }
                 } else {
                     input.value = value;
+                    
+                    // Special handling for sliders
+                    if (key === 'revenue') {
+                        const slider = document.getElementById('revenue-slider');
+                        const display = document.getElementById('revenue-display');
+                        if (slider && display) {
+                            const revenueRanges = [
+                                { value: 0, label: 'Up to £10,000' },
+                                { value: 10000, label: '£10,000 - £50,000' },
+                                { value: 50000, label: '£50,000 - £100,000' },
+                                { value: 100000, label: '£100,000 - £500,000' },
+                                { value: 500000, label: '£500,000 - £1 million' },
+                                { value: 1000000, label: '£1 million - £5 million' },
+                                { value: 5000000, label: '£5 million - £10 million' },
+                                { value: 10000000, label: '£10 million - £50 million' },
+                                { value: 50000000, label: '£50 million - £100 million' },
+                                { value: 100000000, label: '£100 million - £500 million' },
+                                { value: 500000000, label: '£500 million - £1 billion' },
+                                { value: 1000000000, label: '£1 billion - £5 billion' },
+                                { value: 5000000000, label: 'Over £5 billion' }
+                            ];
+                            const index = revenueRanges.findIndex(range => range.value >= parseInt(value));
+                            if (index !== -1) {
+                                slider.value = index;
+                                display.textContent = revenueRanges[index].label;
+                            }
+                        }
+                    } else if (key === 'employees') {
+                        const slider = document.getElementById('employees-slider');
+                        const display = document.getElementById('employees');
+                        if (slider && display) {
+                            const employeeRanges = [
+                                { value: '1-10', label: '1 to 10 employees' },
+                                { value: '11-50', label: '11 to 50 employees' },
+                                { value: '51-100', label: '51 to 100 employees' },
+                                { value: '101-250', label: '101 to 250 employees' },
+                                { value: '251-500', label: '251 to 500 employees' },
+                                { value: '501-1000', label: '501 to 1,000 employees' },
+                                { value: '1001-2500', label: '1,001 to 2,500 employees' },
+                                { value: '2501-5000', label: '2,501 to 5,000 employees' },
+                                { value: '5001-10000', label: '5,001 to 10,000 employees' },
+                                { value: '10000+', label: 'Over 10,000 employees' }
+                            ];
+                            const index = employeeRanges.findIndex(range => range.value === value);
+                            if (index !== -1) {
+                                slider.value = index;
+                                display.textContent = employeeRanges[index].label;
+                                display.value = value;
+                            }
+                        }
+                    } else if (key === 'remote_percentage') {
+                        const slider = document.getElementById('remote-slider');
+                        const display = document.getElementById('remote-display');
+                        const input = document.getElementById('remote-percentage');
+                        if (slider && display && input) {
+                            const percentageRanges = [
+                                { value: 0, label: 'No remote working (0%)' },
+                                { value: 10, label: 'Up to 10%' },
+                                { value: 25, label: '10% to 25%' },
+                                { value: 50, label: '25% to 50%' },
+                                { value: 60, label: '50% to 60%' },
+                                { value: 70, label: '60% to 70%' },
+                                { value: 80, label: '70% to 80%' },
+                                { value: 90, label: '80% to 90%' },
+                                { value: 95, label: '90% to 95%' },
+                                { value: 99, label: '95% to 99%' },
+                                { value: 100, label: 'Fully remote (100%)' }
+                            ];
+                            const index = percentageRanges.findIndex(range => range.value >= parseInt(value));
+                            if (index !== -1) {
+                                slider.value = index;
+                                display.textContent = percentageRanges[index].label;
+                                input.value = value;
+                            }
+                        }
+                    }
                 }
             });
         });
@@ -237,7 +329,7 @@ class QuoteForm {
         });
     }
 
-    showSection(sectionId) {
+    async showSection(sectionId) {
         // Hide all sections
         document.querySelectorAll('.form-section').forEach(section => {
             section.hidden = true;
@@ -249,19 +341,23 @@ class QuoteForm {
             section.hidden = false;
             this.currentSection = sectionId;
             
-            // Handle review section specially
-            if (sectionId === 'review') {
-                this.populateReviewSection();
-            }
-            
             // Update progress bar
             document.querySelectorAll('.moj-progress-bar__item').forEach(item => {
                 const itemSection = item.querySelector('[data-section]').dataset.section;
                 item.classList.remove('moj-progress-bar__item--current');
+                item.classList.remove('moj-progress-bar__item--complete');
+                
                 if (itemSection === sectionId) {
                     item.classList.add('moj-progress-bar__item--current');
+                } else if (this.sections.indexOf(itemSection) < this.sections.indexOf(sectionId)) {
+                    item.classList.add('moj-progress-bar__item--complete');
                 }
             });
+
+            // If showing review section, update its content
+            if (sectionId === 'review') {
+                this.updateReviewSection();
+            }
         }
     }
 
@@ -368,15 +464,45 @@ class QuoteForm {
         
         dl.innerHTML = '';
 
-        // Add section headers and content
+        // Define sections with their fields and display labels
         const sections = {
-            organisation: 'Organisation Details',
-            security: 'IT Security',
-            coverage: 'Coverage Requirements'
+            organisation: {
+                title: 'Organisation Details',
+                fields: {
+                    name: 'Organisation name',
+                    sector_type: 'Sector type',
+                    industry: 'Industry sector',
+                    revenue: 'Annual revenue',
+                    employees: 'Number of employees',
+                    remote_percentage: 'Remote working'
+                }
+            },
+            exposure: {
+                title: 'Exposure Assessment',
+                fields: {
+                    ai_usage: 'AI/ML Systems',
+                    ai_purpose: 'AI Purpose',
+                    ai_decisions: 'AI Decision Making',
+                    data_types: 'Types of Data',
+                    data_volume: 'Data Volume',
+                    pii_records: 'PII Records'
+                }
+            },
+            security: {
+                title: 'Security Controls',
+                fields: {
+                    security_controls: 'Security Controls',
+                    incident_response: 'Incident Response',
+                    backup_frequency: 'Backup Frequency',
+                    training_frequency: 'Security Training',
+                    compliance: 'Compliance Standards'
+                }
+            }
         };
 
-        Object.entries(sections).forEach(([section, title]) => {
-            const sectionData = this.formState.formData[section];
+        // Add each section
+        Object.entries(sections).forEach(([sectionId, config]) => {
+            const sectionData = this.formState.formData[sectionId];
             if (!sectionData) return;
 
             // Add section header
@@ -384,20 +510,32 @@ class QuoteForm {
             header.className = 'govuk-summary-list__row govuk-summary-list__row--header';
             header.innerHTML = `
                 <dt class="govuk-summary-list__key govuk-heading-m">
-                    ${title}
+                    ${config.title}
                 </dt>
                 <dd class="govuk-summary-list__actions">
-                    <a class="govuk-link" href="#" data-section="${section}">
-                        Change<span class="govuk-visually-hidden"> ${title}</span>
+                    <a class="govuk-link" href="#" data-section="${sectionId}">
+                        Change<span class="govuk-visually-hidden"> ${config.title}</span>
                     </a>
                 </dd>
             `;
             dl.appendChild(header);
 
-            // Add section fields
-            Object.entries(sectionData).forEach(([field, value]) => {
-                const row = this.createSummaryRow(section, field, value);
-                dl.appendChild(row);
+            // Add fields for this section
+            Object.entries(config.fields).forEach(([fieldName, label]) => {
+                let value = sectionData[fieldName];
+                if (value !== undefined && value !== '') {
+                    const row = document.createElement('div');
+                    row.className = 'govuk-summary-list__row';
+                    row.innerHTML = `
+                        <dt class="govuk-summary-list__key">
+                            ${label}
+                        </dt>
+                        <dd class="govuk-summary-list__value">
+                            ${this.formatReviewValue(value)}
+                        </dd>
+                    `;
+                    dl.appendChild(row);
+                }
             });
         });
 
@@ -406,23 +544,37 @@ class QuoteForm {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const section = e.currentTarget.dataset.section;
-                if (section) this.showSection(section);
+                this.showSection(section);
             });
         });
     }
 
-    createSummaryRow(section, field, value) {
-        const div = document.createElement('div');
-        div.className = 'govuk-summary-list__row';
-        div.innerHTML = `
-            <dt class="govuk-summary-list__key">
-                ${this.formatFieldName(field)}
-            </dt>
-            <dd class="govuk-summary-list__value">
-                ${this.formatFieldValue(value)}
-            </dd>
-        `;
-        return div;
+    formatReviewValue(value) {
+        if (Array.isArray(value)) {
+            return value.map(v => this.formatSingleValue(v)).join('<br>');
+        }
+        return this.formatSingleValue(value);
+    }
+
+    formatSingleValue(value) {
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+        if (typeof value === 'number') {
+            if (value >= 1000000) {
+                return new Intl.NumberFormat('en-GB', {
+                    style: 'currency',
+                    currency: 'GBP',
+                    notation: 'compact',
+                    maximumFractionDigits: 1
+                }).format(value);
+            }
+            return new Intl.NumberFormat('en-GB', {
+                style: 'currency',
+                currency: 'GBP'
+            }).format(value);
+        }
+        return value || 'Not provided';
     }
 
     setupValidation() {
@@ -457,12 +609,44 @@ class QuoteForm {
         const formData = new FormData(form);
         const sectionData = {};
         
-        // Convert FormData to object
-        formData.forEach((value, key) => {
-            if (key.endsWith('Enabled')) {
-                sectionData[key] = value === 'true';
+        // Get all form inputs to handle checkbox groups and selects
+        const inputs = form.querySelectorAll('input, select');
+        
+        inputs.forEach(input => {
+            const name = input.name;
+            
+            // Skip if no name attribute
+            if (!name) return;
+            
+            // Handle checkbox groups (multiple checkboxes with same name)
+            if (input.type === 'checkbox') {
+                if (name.endsWith('[]')) {
+                    // Array-style checkboxes
+                    const baseName = name.slice(0, -2);
+                    if (!sectionData[baseName]) {
+                        sectionData[baseName] = [];
+                    }
+                    if (input.checked) {
+                        sectionData[baseName].push(input.value);
+                    }
+                } else if (name === 'security_controls' || name === 'ai_usage' || name === 'ai_applications') {
+                    // Handle multi-select checkboxes
+                    if (!sectionData[name]) {
+                        sectionData[name] = [];
+                    }
+                    if (input.checked) {
+                        sectionData[name].push(input.value);
+                    }
+                } else {
+                    // Single checkboxes (like PII)
+                    sectionData[name] = input.checked;
+                }
+            } else if (input.tagName.toLowerCase() === 'select') {
+                // Handle select elements
+                sectionData[name] = input.value;
             } else {
-                sectionData[key] = value;
+                // Handle all other input types
+                sectionData[name] = formData.get(name);
             }
         });
 
@@ -852,7 +1036,9 @@ class QuoteForm {
         const display = document.getElementById('revenue-display');
         const input = document.getElementById('revenue');
         
-        // Exponential scale for revenue values with ranges
+        // Ensure the input has a name attribute to be included in form data
+        input.setAttribute('name', 'revenue');
+        
         const revenueRanges = [
             { value: 0, label: 'Up to £10,000' },
             { value: 10000, label: '£10,000 - £50,000' },
@@ -869,10 +1055,30 @@ class QuoteForm {
             { value: 5000000000, label: 'Over £5 billion' }
         ];
 
-        slider.addEventListener('input', (e) => {
+        slider.addEventListener('input', async (e) => {
             const index = parseInt(e.target.value);
             display.textContent = revenueRanges[index].label;
             input.value = revenueRanges[index].value;
+            
+            // Create and submit a form update
+            const form = input.closest('form');
+            if (form) {
+                const formData = new FormData(form);
+                const sectionData = {};
+                formData.forEach((value, key) => {
+                    sectionData[key] = value;
+                });
+
+                // Send via WebSocket
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'form_update',
+                        formData: {
+                            [this.currentSection]: sectionData
+                        }
+                    }));
+                }
+            }
         });
 
         // Format on initial load if value exists
@@ -882,7 +1088,7 @@ class QuoteForm {
             if (index !== -1) {
                 slider.value = index;
                 display.textContent = revenueRanges[index].label;
-                input.value = revenueRanges[index].value;
+                input.value = value;
             }
         } else {
             // Set initial value
@@ -894,6 +1100,10 @@ class QuoteForm {
     setupEmployeesInput() {
         const slider = document.getElementById('employees-slider');
         const display = document.getElementById('employees');
+        const input = document.getElementById('employees-input');
+        
+        // Ensure the input has a name attribute
+        input.setAttribute('name', 'employees');
         
         const employeeRanges = [
             { value: '1-10', label: '1 to 10 employees' },
@@ -908,27 +1118,47 @@ class QuoteForm {
             { value: '10000+', label: 'Over 10,000 employees' }
         ];
 
-        // Update max value to match new array length
+        // Update max value to match array length
         slider.max = employeeRanges.length - 1;
 
-        slider.addEventListener('input', (e) => {
+        slider.addEventListener('input', async (e) => {
             const index = parseInt(e.target.value);
             display.textContent = employeeRanges[index].label;
-            display.dataset.value = employeeRanges[index].value;
+            input.value = employeeRanges[index].value;
+            
+            // Use the same form update pattern as revenue
+            const form = input.closest('form');
+            if (form) {
+                const formData = new FormData(form);
+                const sectionData = {};
+                formData.forEach((value, key) => {
+                    sectionData[key] = value;
+                });
+
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'form_update',
+                        formData: {
+                            [this.currentSection]: sectionData
+                        }
+                    }));
+                }
+            }
         });
 
-        // Set initial value
+        // Format on initial load if value exists
         if (this.formState?.formData?.organisation?.employees) {
             const value = this.formState.formData.organisation.employees;
             const index = employeeRanges.findIndex(range => range.value === value);
             if (index !== -1) {
                 slider.value = index;
                 display.textContent = employeeRanges[index].label;
-                display.dataset.value = employeeRanges[index].value;
+                input.value = value;
             }
         } else {
+            // Set initial value
             display.textContent = employeeRanges[0].label;
-            display.dataset.value = employeeRanges[0].value;
+            input.value = employeeRanges[0].value;
         }
     }
 
@@ -936,6 +1166,9 @@ class QuoteForm {
         const slider = document.getElementById('remote-slider');
         const display = document.getElementById('remote-display');
         const input = document.getElementById('remote-percentage');
+        
+        // Ensure the input has a name attribute
+        input.setAttribute('name', 'remote_percentage');
         
         const percentageRanges = [
             { value: 0, label: 'No remote working (0%)' },
@@ -951,22 +1184,45 @@ class QuoteForm {
             { value: 100, label: 'Fully remote (100%)' }
         ];
 
-        slider.addEventListener('input', (e) => {
+        // Update max value to match array length
+        slider.max = percentageRanges.length - 1;
+
+        slider.addEventListener('input', async (e) => {
             const index = parseInt(e.target.value);
             display.textContent = percentageRanges[index].label;
             input.value = percentageRanges[index].value;
+            
+            // Use the same form update pattern as revenue
+            const form = input.closest('form');
+            if (form) {
+                const formData = new FormData(form);
+                const sectionData = {};
+                formData.forEach((value, key) => {
+                    sectionData[key] = value;
+                });
+
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'form_update',
+                        formData: {
+                            [this.currentSection]: sectionData
+                        }
+                    }));
+                }
+            }
         });
 
-        // Set initial value
+        // Format on initial load if value exists
         if (this.formState?.formData?.organisation?.remote_percentage) {
             const value = parseInt(this.formState.formData.organisation.remote_percentage);
-            const index = percentageRanges.findIndex(range => range.value >= value);
+            const index = percentageRanges.findIndex(range => range.value >= parseInt(value));
             if (index !== -1) {
                 slider.value = index;
                 display.textContent = percentageRanges[index].label;
-                input.value = percentageRanges[index].value;
+                input.value = value;
             }
         } else {
+            // Set initial value
             display.textContent = percentageRanges[0].label;
             input.value = percentageRanges[0].value;
         }
