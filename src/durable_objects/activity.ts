@@ -10,40 +10,61 @@
 
 import { RiskProfile } from '../types/risk-profile';
 
+// Define valid sections as const array
+const sections = ['organisation', 'exposure', 'security', 'review'] as const;
+type SectionType = typeof sections[number];
+
 interface ActivityState {
-  status: 'pending' | 'in_progress' | 'draft' | 'completed' | 'failed';
-  currentSection: 'organisation' | 'security' | 'coverage' | 'review';
-  formData: {
-    organisation?: {
-      name?: string;
-      industry?: string;
-      revenue?: '0-50k' | '50k-100k' | '100k-500k' | '500k-1m' | '1m-10m' | '10m-100m' | '100m-1b' | 'over-1b';
-      employees?: string;
-    };
-    security?: {
-      backupFrequency?: string;
-      firewallEnabled?: boolean;
-      antivirusEnabled?: boolean;
-      trainingFrequency?: string;
-    };
-    coverage?: {
-      coverageLimit?: number;
-      excess?: number;
-    };
+  currentSection: SectionType;
+  formData?: {
+    [key: string]: any;
   };
-  createdAt: number;
-  updatedAt: number;
-  completedAt?: number;
+  status?: 'draft' | 'completed';
+  updatedAt?: number;
 }
 
 export class ActivityDO {
   private state: DurableObjectState;
   private sessions: Set<WebSocket>;
-  private activityState: ActivityState;
+  // Initialize with default state to fix "no initializer" error
+  private activityState: ActivityState = {
+    currentSection: 'organisation',
+    formData: {}
+  };
 
   constructor(state: DurableObjectState) {
     this.state = state;
     this.sessions = new Set();
+  }
+
+  async initialize() {
+    // Load stored state, cast as ActivityState to ensure type safety
+    const stored = await this.state.storage.get('state') as ActivityState | null;
+    if (stored) {
+      this.activityState = stored;
+    }
+  }
+
+  // Fix section type error in navigation
+  private async updateSection(section: string) {
+    const currentIndex = sections.indexOf(this.activityState.currentSection);
+    if (currentIndex < sections.length - 1) {
+      // Cast to SectionType since we know it's valid from the sections array
+      const nextSection = sections[currentIndex + 1] as SectionType;
+      this.activityState.currentSection = nextSection;
+    }
+  }
+
+  // Fix spread operator error by typing the update parameter
+  private async updateState(update: Partial<ActivityState>) {
+    // Create new state object with type safety
+    const newState: ActivityState = {
+      ...this.activityState,
+      ...update,
+      updatedAt: Date.now()
+    };
+    this.activityState = newState;
+    await this.state.storage.put('state', this.activityState);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -54,11 +75,8 @@ export class ActivityDO {
     } else {
         // Initialize state if not exists
         this.activityState = {
-            status: 'pending',
             currentSection: 'organisation',
-            formData: {},
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+            formData: {}
         };
         await this.state.storage.put('state', this.activityState);
     }
@@ -91,15 +109,11 @@ export class ActivityDO {
 
             // Update current section if all required fields are filled
             if (this.validateSection(data.formData)) {
-              const sections = ['organisation', 'security', 'coverage', 'review'];
-              const currentIndex = sections.indexOf(this.activityState.currentSection);
-              if (currentIndex < sections.length - 1) {
-                this.activityState.currentSection = sections[currentIndex + 1];
-              }
+              await this.updateSection(data.formData.currentSection);
             }
 
             // Save state
-            await this.state.storage.put('state', this.activityState);
+            await this.updateState(this.activityState);
 
             // Broadcast to all clients
             const update = JSON.stringify({
@@ -108,17 +122,15 @@ export class ActivityDO {
             });
 
             this.sessions.forEach(ws => {
-              try {
+              if (ws.readyState === WebSocket.OPEN) {
                 ws.send(update);
-              } catch (err) {
-                this.sessions.delete(ws);
               }
             });
           } else if (data.type === 'submit') {
             // Handle form submission
             this.activityState.status = 'completed';
-            this.activityState.completedAt = Date.now();
-            await this.state.storage.put('state', this.activityState);
+            this.activityState.updatedAt = Date.now();
+            await this.updateState(this.activityState);
 
             // Notify all clients
             const update = JSON.stringify({
@@ -127,16 +139,14 @@ export class ActivityDO {
             });
 
             this.sessions.forEach(ws => {
-              try {
+              if (ws.readyState === WebSocket.OPEN) {
                 ws.send(update);
-              } catch (err) {
-                this.sessions.delete(ws);
               }
             });
           } else if (data.type === 'save_draft') {
             // Handle save draft action
             this.activityState.status = 'draft';
-            await this.state.storage.put('state', this.activityState);
+            await this.updateState(this.activityState);
             
             // Notify all clients
             const update = JSON.stringify({
@@ -145,18 +155,13 @@ export class ActivityDO {
             });
             
             this.sessions.forEach(ws => {
-              try {
+              if (ws.readyState === WebSocket.OPEN) {
                 ws.send(update);
-              } catch (err) {
-                this.sessions.delete(ws);
               }
             });
           }
         } catch (err) {
-          server.send(JSON.stringify({
-            type: 'error',
-            error: 'Invalid message format'
-          }));
+          console.error('Error handling message:', err);
         }
       });
 
@@ -183,12 +188,7 @@ export class ActivityDO {
 
       case 'POST':
         const update = await request.json();
-        this.activityState = {
-          ...this.activityState,
-          ...update,
-          updatedAt: Date.now()
-        };
-        await this.state.storage.put('state', this.activityState);
+        await this.updateState(update);
         return new Response(JSON.stringify({ success: true }), {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -226,13 +226,11 @@ export class ActivityDO {
         
         // Notify all connected clients
         this.sessions.forEach(ws => {
-          try {
+          if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
               type: 'state_update',
               state: stored
             }));
-          } catch (e) {
-            this.sessions.delete(ws);
           }
         });
       }
