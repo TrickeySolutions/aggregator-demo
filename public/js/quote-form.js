@@ -15,7 +15,7 @@ class QuoteForm {
         console.log('QuoteForm initialized');
         this.ws = null;
         this.currentSection = 'organisation';
-        this.sections = ['organisation', 'security', 'coverage', 'review'];
+        this.sections = ['organisation', 'exposure', 'security', 'review'];
         this.formState = {};
         this.isLoading = false;
         this.touchedFields = new Set();
@@ -25,6 +25,11 @@ class QuoteForm {
         this.setupNavigation();
         this.setupValidation();
         this.setupLoadingIndicator();
+        this.setupSectorSelection();
+        this.setupRevenueInput();
+        this.setupEmployeesInput();
+        this.setupRemoteWorkingInput();
+        this.setupAIUsageConditionals();
 
         // Add draft handling
         document.querySelectorAll('[data-action="save-draft"], [data-action="submit"]').forEach(btn => {
@@ -121,29 +126,22 @@ class QuoteForm {
             this.ws.addEventListener('open', () => {
                 console.log('WebSocket connected');
                 clearTimeout(connectionTimeout);
+                // Request initial state
+                this.ws.send(JSON.stringify({ type: 'get_state' }));
             });
-            
-            // Handle messages
+
             this.ws.addEventListener('message', (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     if (data.type === 'state_update') {
-                        this.updateFormState(data.state);
-                    } else if (data.type === 'error') {
-                        this.showError('Server Error', data.error);
+                        this.formState = data.state;
+                        this.updateFormFromState();
                     }
                 } catch (err) {
                     console.error('Failed to parse WebSocket message:', err);
                 }
             });
 
-            // Handle errors
-            this.ws.addEventListener('error', (error) => {
-                console.error('WebSocket error:', error);
-                this.showError('Connection error', 'Failed to connect to server. Please refresh the page.');
-            });
-
-            // Handle disconnection with reconnection attempt
             this.ws.addEventListener('close', () => {
                 console.log('WebSocket disconnected, attempting to reconnect...');
                 setTimeout(() => this.setupWebSocket(), 1000);
@@ -155,71 +153,135 @@ class QuoteForm {
         }
     }
 
-    setupNavigation() {
-        // Handle progress bar navigation
-        document.querySelectorAll('.moj-progress-bar__link').forEach(link => {
-            link.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const targetSection = e.currentTarget.dataset.section;
-                if (!targetSection) return;
-
-                // Allow navigation to review if all sections are complete
-                if (targetSection === 'review') {
-                    if (this.areAllSectionsComplete()) {
-                        this.showSection(targetSection);
-                    }
-                    return;
-                }
-
-                // Don't allow navigation to disabled sections
-                if (e.currentTarget.parentElement.classList.contains('moj-progress-bar__item--disabled')) {
-                    return;
-                }
-
-                // Validate current section before navigating
-                if (await this.validateSection()) {
-                    this.showSection(targetSection);
-                }
-            });
-        });
-
-        // Handle back/continue buttons
-        document.querySelectorAll('[data-action="back"]').forEach(btn => {
-            btn.addEventListener('click', () => this.navigate('back'));
-        });
-
-        // Handle form submissions
-        this.sections.forEach(section => {
+    updateFormFromState() {
+        if (!this.formState?.formData) return;
+        
+        Object.entries(this.formState.formData).forEach(([section, data]) => {
             const form = document.getElementById(`${section}-form`);
             if (!form) return;
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (await this.validateSection()) {
-                    const currentIndex = this.sections.indexOf(this.currentSection);
-                    const nextSection = this.sections[currentIndex + 1];
-                    if (nextSection) {
-                        this.showSection(nextSection);
+            Object.entries(data).forEach(([key, value]) => {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (!input) return;
+
+                if (input.type === 'checkbox') {
+                    input.checked = value;
+                    // Trigger change event for conditionals
+                    input.dispatchEvent(new Event('change'));
+                } else if (input.type === 'radio') {
+                    const radio = form.querySelector(`input[name="${key}"][value="${value}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        radio.dispatchEvent(new Event('change'));
                     }
+                } else {
+                    input.value = value;
                 }
             });
         });
     }
 
-    async navigate(direction) {
-        const currentIndex = this.sections.indexOf(this.currentSection);
-        let nextIndex;
+    setupNavigation() {
+        // Handle form submissions
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const currentSection = this.currentSection;
+                const formData = new FormData(form);
+                const sectionData = {};
+                
+                // Convert FormData to object
+                formData.forEach((value, key) => {
+                    if (sectionData[key]) {
+                        if (!Array.isArray(sectionData[key])) {
+                            sectionData[key] = [sectionData[key]];
+                        }
+                        sectionData[key].push(value);
+                    } else {
+                        sectionData[key] = value;
+                    }
+                });
 
-        if (direction === 'back') {
-            nextIndex = Math.max(0, currentIndex - 1);
-        } else {
-            if (!await this.validateSection()) {
-                return;
+                // Update form state
+                if (!this.formState.formData) {
+                    this.formState.formData = {};
+                }
+                this.formState.formData[currentSection] = sectionData;
+
+                // Send state update via WebSocket
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    await this.ws.send(JSON.stringify({
+                        type: 'update_section',
+                        section: currentSection,
+                        data: sectionData
+                    }));
+                }
+
+                // Move to next section
+                const currentIndex = this.sections.indexOf(currentSection);
+                if (currentIndex < this.sections.length - 1) {
+                    const nextSection = this.sections[currentIndex + 1];
+                    await this.showSection(nextSection);
+                }
+            });
+        });
+
+        // Update progress bar navigation
+        document.querySelectorAll('.moj-progress-bar__link').forEach(link => {
+            link.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const section = e.target.closest('[data-section]').dataset.section;
+                await this.showSection(section);
+            });
+        });
+    }
+
+    showSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.form-section').forEach(section => {
+            section.hidden = true;
+        });
+        
+        // Show requested section
+        const section = document.getElementById(`${sectionId}-section`);
+        if (section) {
+            section.hidden = false;
+            this.currentSection = sectionId;
+            
+            // Handle review section specially
+            if (sectionId === 'review') {
+                this.populateReviewSection();
             }
-            nextIndex = Math.min(this.sections.length - 1, currentIndex + 1);
+            
+            // Update progress bar
+            document.querySelectorAll('.moj-progress-bar__item').forEach(item => {
+                const itemSection = item.querySelector('[data-section]').dataset.section;
+                item.classList.remove('moj-progress-bar__item--current');
+                if (itemSection === sectionId) {
+                    item.classList.add('moj-progress-bar__item--current');
+                }
+            });
         }
+    }
 
-        this.showSection(this.sections[nextIndex]);
+    populateReviewSection() {
+        const reviewSection = document.getElementById('review-section');
+        if (!reviewSection) return;
+
+        // Clear existing content
+        const contentDiv = reviewSection.querySelector('.review-content');
+        if (!contentDiv) return;
+        contentDiv.innerHTML = '';
+
+        // Add summary for each completed section
+        this.sections.slice(0, -1).forEach(section => {
+            const sectionData = this.formState.formData?.[section];
+            if (sectionData) {
+                const summary = this.createSectionSummary(section, sectionData);
+                contentDiv.appendChild(summary);
+            }
+        });
     }
 
     async validateSection() {
@@ -368,48 +430,51 @@ class QuoteForm {
             const form = document.getElementById(`${section}-form`);
             if (!form) return;
 
-            // Single form submission handler
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                // Mark all fields in this section as touched
-                form.querySelectorAll('input, select').forEach(input => {
-                    this.touchedFields.add(input.id);
-                });
-
-                // Validate and save
-                const formData = new FormData(form);
-                const errors = this.validateFormData(formData);
-                this.showErrors(errors);
-
-                if (errors.length === 0) {
-                    if (await this.saveSection(formData)) {
-                        // Only move to next section if save was successful
-                        const currentIndex = this.sections.indexOf(this.currentSection);
-                        const nextSection = this.sections[currentIndex + 1];
-                        if (nextSection) {
-                            this.showSection(nextSection);
-                        }
-                    }
-                }
-            });
-
-            // Field validation handlers
+            // Add blur and input handlers for real-time updates
             form.querySelectorAll('input, select').forEach(input => {
-                input.addEventListener('blur', () => {
+                // Update on blur
+                input.addEventListener('blur', async () => {
                     this.touchedFields.add(input.id);
-                    this.validateField(input);
+                    await this.saveFieldUpdate(input);
                 });
 
+                // Update on input with debounce
                 input.addEventListener('input', () => {
                     if (!this.touchedFields.has(input.id)) return;
                     clearTimeout(this.validationTimeout);
-                    this.validationTimeout = setTimeout(() => {
-                        this.validateField(input);
+                    this.validationTimeout = setTimeout(async () => {
+                        await this.saveFieldUpdate(input);
                     }, 500);
                 });
             });
         });
+    }
+
+    async saveFieldUpdate(input) {
+        const form = input.closest('form');
+        if (!form) return;
+
+        const formData = new FormData(form);
+        const sectionData = {};
+        
+        // Convert FormData to object
+        formData.forEach((value, key) => {
+            if (key.endsWith('Enabled')) {
+                sectionData[key] = value === 'true';
+            } else {
+                sectionData[key] = value;
+            }
+        });
+
+        // Send update via WebSocket
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'form_update',
+                formData: {
+                    [this.currentSection]: sectionData
+                }
+            }));
+        }
     }
 
     validateField(field) {
@@ -566,28 +631,6 @@ class QuoteForm {
         return value;
     }
 
-    showSection(sectionId) {
-        // Hide all sections and clear their errors
-        document.querySelectorAll('.form-section').forEach(section => {
-            section.hidden = true;
-            section.querySelectorAll('.govuk-form-group--error').forEach(group => {
-                group.classList.remove('govuk-form-group--error');
-                group.querySelector('.govuk-error-message')?.remove();
-            });
-        });
-        
-        // Clear error summary but keep touched fields state
-        this.showErrors([]);
-        
-        // Show target section
-        const targetSection = document.getElementById(`${sectionId}-section`);
-        if (targetSection) {
-            targetSection.hidden = false;
-            this.currentSection = sectionId;
-            this.updateStatusIndicators(this.formState.status);
-        }
-    }
-
     async saveSection(formData) {
         try {
             this.showLoading(true);
@@ -725,6 +768,251 @@ class QuoteForm {
         return this.sections.slice(0, -1).every(section => {
             const sectionData = this.formState.formData?.[section];
             return sectionData && Object.keys(sectionData).length > 0;
+        });
+    }
+
+    setupSectorSelection() {
+        const sectorOptions = {
+            public: [
+                { value: 'central-government', label: 'Central Government' },
+                { value: 'local-government', label: 'Local Government' },
+                { value: 'nhs', label: 'NHS / Healthcare' },
+                { value: 'education', label: 'Education' },
+                { value: 'emergency-services', label: 'Emergency Services' },
+                { value: 'housing', label: 'Housing Association' }
+            ],
+            third: [
+                { value: 'charity', label: 'Charity / Non-profit' }
+            ],
+            private: [
+                { value: 'technology', label: 'Technology' },
+                { value: 'finance', label: 'Financial Services' },
+                { value: 'retail', label: 'Retail' },
+                { value: 'manufacturing', label: 'Manufacturing' },
+                { value: 'healthcare-private', label: 'Private Healthcare' },
+                { value: 'legal', label: 'Legal Services' },
+                { value: 'construction', label: 'Construction' },
+                { value: 'utilities', label: 'Utilities' },
+                { value: 'transport', label: 'Transport' },
+                { value: 'other', label: 'Other' }
+            ]
+        };
+
+        const industrySelect = document.getElementById('industry');
+        const industryGroup = document.getElementById('industry-select-group');
+
+        document.querySelectorAll('input[name="sector-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const selectedType = e.target.value;
+                
+                // Show the dropdown
+                industryGroup.hidden = false;
+                
+                // Clear and populate the dropdown
+                industrySelect.innerHTML = '<option value="">Choose specific sector</option>';
+                
+                sectorOptions[selectedType].forEach(option => {
+                    const optionEl = document.createElement('option');
+                    optionEl.value = option.value;
+                    optionEl.textContent = option.label;
+                    industrySelect.appendChild(optionEl);
+                });
+
+                // Clear any existing selection
+                industrySelect.value = '';
+            });
+        });
+
+        // Handle pre-selected values when returning to the form
+        if (this.formState?.formData?.organisation?.industry) {
+            const industry = this.formState.formData.organisation.industry;
+            let sectorType;
+            
+            // Determine sector type from industry value
+            for (const [type, options] of Object.entries(sectorOptions)) {
+                if (options.some(opt => opt.value === industry)) {
+                    sectorType = type;
+                    break;
+                }
+            }
+
+            if (sectorType) {
+                const radio = document.getElementById(`sector-${sectorType}`);
+                if (radio) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                    industrySelect.value = industry;
+                }
+            }
+        }
+    }
+
+    setupRevenueInput() {
+        const slider = document.getElementById('revenue-slider');
+        const display = document.getElementById('revenue-display');
+        const input = document.getElementById('revenue');
+        
+        // Exponential scale for revenue values with ranges
+        const revenueRanges = [
+            { value: 0, label: 'Up to £10,000' },
+            { value: 10000, label: '£10,000 - £50,000' },
+            { value: 50000, label: '£50,000 - £100,000' },
+            { value: 100000, label: '£100,000 - £500,000' },
+            { value: 500000, label: '£500,000 - £1 million' },
+            { value: 1000000, label: '£1 million - £5 million' },
+            { value: 5000000, label: '£5 million - £10 million' },
+            { value: 10000000, label: '£10 million - £50 million' },
+            { value: 50000000, label: '£50 million - £100 million' },
+            { value: 100000000, label: '£100 million - £500 million' },
+            { value: 500000000, label: '£500 million - £1 billion' },
+            { value: 1000000000, label: '£1 billion - £5 billion' },
+            { value: 5000000000, label: 'Over £5 billion' }
+        ];
+
+        slider.addEventListener('input', (e) => {
+            const index = parseInt(e.target.value);
+            display.textContent = revenueRanges[index].label;
+            input.value = revenueRanges[index].value;
+        });
+
+        // Format on initial load if value exists
+        if (this.formState?.formData?.organisation?.revenue) {
+            const value = parseInt(this.formState.formData.organisation.revenue);
+            const index = revenueRanges.findIndex(range => range.value >= value);
+            if (index !== -1) {
+                slider.value = index;
+                display.textContent = revenueRanges[index].label;
+                input.value = revenueRanges[index].value;
+            }
+        } else {
+            // Set initial value
+            display.textContent = revenueRanges[0].label;
+            input.value = revenueRanges[0].value;
+        }
+    }
+
+    setupEmployeesInput() {
+        const slider = document.getElementById('employees-slider');
+        const display = document.getElementById('employees');
+        
+        const employeeRanges = [
+            { value: '1-10', label: '1 to 10 employees' },
+            { value: '11-50', label: '11 to 50 employees' },
+            { value: '51-100', label: '51 to 100 employees' },
+            { value: '101-250', label: '101 to 250 employees' },
+            { value: '251-500', label: '251 to 500 employees' },
+            { value: '501-1000', label: '501 to 1,000 employees' },
+            { value: '1001-2500', label: '1,001 to 2,500 employees' },
+            { value: '2501-5000', label: '2,501 to 5,000 employees' },
+            { value: '5001-10000', label: '5,001 to 10,000 employees' },
+            { value: '10000+', label: 'Over 10,000 employees' }
+        ];
+
+        // Update max value to match new array length
+        slider.max = employeeRanges.length - 1;
+
+        slider.addEventListener('input', (e) => {
+            const index = parseInt(e.target.value);
+            display.textContent = employeeRanges[index].label;
+            display.dataset.value = employeeRanges[index].value;
+        });
+
+        // Set initial value
+        if (this.formState?.formData?.organisation?.employees) {
+            const value = this.formState.formData.organisation.employees;
+            const index = employeeRanges.findIndex(range => range.value === value);
+            if (index !== -1) {
+                slider.value = index;
+                display.textContent = employeeRanges[index].label;
+                display.dataset.value = employeeRanges[index].value;
+            }
+        } else {
+            display.textContent = employeeRanges[0].label;
+            display.dataset.value = employeeRanges[0].value;
+        }
+    }
+
+    setupRemoteWorkingInput() {
+        const slider = document.getElementById('remote-slider');
+        const display = document.getElementById('remote-display');
+        const input = document.getElementById('remote-percentage');
+        
+        const percentageRanges = [
+            { value: 0, label: 'No remote working (0%)' },
+            { value: 10, label: 'Up to 10%' },
+            { value: 25, label: '10% to 25%' },
+            { value: 50, label: '25% to 50%' },
+            { value: 60, label: '50% to 60%' },
+            { value: 70, label: '60% to 70%' },
+            { value: 80, label: '70% to 80%' },
+            { value: 90, label: '80% to 90%' },
+            { value: 95, label: '90% to 95%' },
+            { value: 99, label: '95% to 99%' },
+            { value: 100, label: 'Fully remote (100%)' }
+        ];
+
+        slider.addEventListener('input', (e) => {
+            const index = parseInt(e.target.value);
+            display.textContent = percentageRanges[index].label;
+            input.value = percentageRanges[index].value;
+        });
+
+        // Set initial value
+        if (this.formState?.formData?.organisation?.remote_percentage) {
+            const value = parseInt(this.formState.formData.organisation.remote_percentage);
+            const index = percentageRanges.findIndex(range => range.value >= value);
+            if (index !== -1) {
+                slider.value = index;
+                display.textContent = percentageRanges[index].label;
+                input.value = percentageRanges[index].value;
+            }
+        } else {
+            display.textContent = percentageRanges[0].label;
+            input.value = percentageRanges[0].value;
+        }
+    }
+
+    setupAIUsageConditionals() {
+        const mainCheckboxes = document.querySelectorAll('input[name="ai_usage"]');
+        console.log('Found AI checkboxes:', mainCheckboxes.length);
+
+        function updateConditionals(checkbox) {
+            console.log('Updating conditional for:', checkbox.id);
+            if (checkbox.hasAttribute('aria-controls')) {
+                const conditional = document.getElementById(checkbox.getAttribute('aria-controls'));
+                console.log('Found conditional:', conditional?.id);
+                
+                if (conditional) {
+                    if (checkbox.checked) {
+                        console.log('Showing conditional');
+                        checkbox.setAttribute('aria-expanded', 'true');
+                        conditional.classList.remove('govuk-checkboxes__conditional--hidden');
+                    } else {
+                        console.log('Hiding conditional');
+                        checkbox.setAttribute('aria-expanded', 'false');
+                        conditional.classList.add('govuk-checkboxes__conditional--hidden');
+                        // Clear sub-checkboxes when parent is unchecked
+                        conditional.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                            input.checked = false;
+                        });
+                    }
+                }
+            }
+        }
+
+        mainCheckboxes.forEach(checkbox => {
+            // Set initial state to hidden
+            if (checkbox.hasAttribute('aria-controls')) {
+                const conditional = document.getElementById(checkbox.getAttribute('aria-controls'));
+                if (conditional) {
+                    conditional.classList.add('govuk-checkboxes__conditional--hidden');
+                }
+            }
+            
+            // Handle changes
+            checkbox.addEventListener('change', (e) => {
+                updateConditionals(e.target);
+            });
         });
     }
 }
