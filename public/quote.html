@@ -348,6 +348,57 @@
         .govuk-checkboxes__conditional--hidden {
             display: none !important;
         }
+
+        /* Responsive styles for progress bar */
+        @media (max-width: 768px) {
+            .moj-progress-bar__list {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .moj-progress-bar__item {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 140px;
+            }
+
+            .moj-progress-bar__label {
+                font-size: 14px;
+                white-space: normal;
+                text-align: center;
+                line-height: 1.2;
+            }
+        }
+
+        /* Even smaller screens */
+        @media (max-width: 480px) {
+            .moj-progress-bar__item {
+                flex: 1 1 100%;
+            }
+
+            .moj-progress-bar__label {
+                font-size: 16px;
+            }
+
+            /* Adjust main content padding */
+            .govuk-main-wrapper {
+                padding: 20px 15px;
+            }
+
+            /* Adjust section headings */
+            .govuk-heading-l {
+                font-size: 24px;
+                word-wrap: break-word;
+            }
+        }
+
+        /* Fix container width on small screens */
+        @media (max-width: 40.0625em) {
+            .govuk-width-container {
+                margin-right: 15px;
+                margin-left: 15px;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="govuk-template__body">
@@ -432,7 +483,7 @@
                     <div class="govuk-form-group">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                                Industry sector
+                            Industry sector
                             </legend>
                             
                             <div class="govuk-hint">
@@ -474,6 +525,7 @@
                         </select>
                     </div>
 
+                    <!-- Revenue Section -->
                     <div class="govuk-form-group">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
@@ -484,33 +536,21 @@
                                 Use the slider to select your organisation's approximate annual revenue range
                             </div>
 
-                            <div class="govuk-form-group" id="revenue-slider-group">
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="revenue-slider">
+                            Annual revenue
+                        </label>
                                 <div class="govuk-slider">
-                                    <input type="range" 
-                                           class="govuk-slider__input" 
+                                    <input class="govuk-slider__input" 
                                            id="revenue-slider" 
+                                           type="range" 
                                            min="0" 
                                            max="12" 
-                                           step="1" 
-                                           value="0"
-                                           aria-label="Revenue slider">
-                                    <div class="govuk-slider__labels">
-                                        <span>£0</span>
-                                        <span>£1m</span>
-                                        <span>£100m</span>
-                                        <span>£5bn+</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="govuk-form-group">
-                                <label class="govuk-label" for="revenue-display">
-                                    Selected revenue range
-                                </label>
-                                <div class="govuk-display-value">
-                                    <span id="revenue-display" class="govuk-display-value__text"></span>
-                                    <input type="hidden" id="revenue" name="revenue" required>
-                                </div>
+                                           value="0">
+                                    <div id="revenue-display" class="govuk-slider__labels"></div>
+                                    <!-- Hidden input for form data -->
+                                    <input type="hidden" id="revenue" name="revenue" value="0">
+                        </div>
                             </div>
                         </fieldset>
                     </div>
@@ -525,31 +565,20 @@
                                 Use the slider to select your organisation's employee count range
                             </div>
 
-                            <div class="govuk-form-group" id="employees-slider-group">
-                                <div class="govuk-slider">
-                                    <input type="range" 
-                                           class="govuk-slider__input" 
-                                           id="employees-slider" 
-                                           min="0" 
-                                           max="6" 
-                                           step="1" 
-                                           value="0"
-                                           aria-label="Employees slider">
-                                    <div class="govuk-slider__labels">
-                                        <span>0</span>
-                                        <span>100</span>
-                                        <span>1,000</span>
-                                        <span>10,000+</span>
-                                    </div>
-                                </div>
-                            </div>
-
                             <div class="govuk-form-group">
-                                <label class="govuk-label" for="employees">
-                                    Selected employee range
-                                </label>
-                                <div class="govuk-display-value">
-                                    <span id="employees" class="govuk-display-value__text"></span>
+                                <label class="govuk-label" for="employees-slider">
+                            Number of employees
+                        </label>
+                                <div class="govuk-slider">
+                                    <input class="govuk-slider__input" 
+                                           id="employees-slider" 
+                                           type="range" 
+                                           min="0" 
+                                           max="9" 
+                                           value="0">
+                                    <div id="employees" class="govuk-slider__labels"></div>
+                                    <!-- Add hidden input for form data -->
+                                    <input type="hidden" id="employees-input" name="employees" value="1-10">
                                 </div>
                             </div>
                         </fieldset>
@@ -565,31 +594,20 @@
                                 What percentage of your employees work remotely or hybrid?
                             </div>
 
-                            <div class="govuk-form-group" id="remote-slider-group">
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="remote-slider">
+                                    Percentage of workforce working remotely
+                                </label>
                                 <div class="govuk-slider">
-                                    <input type="range" 
-                                           class="govuk-slider__input" 
+                                    <input class="govuk-slider__input" 
                                            id="remote-slider" 
+                                           type="range" 
                                            min="0" 
                                            max="10" 
-                                           step="1" 
-                                           value="0"
-                                           aria-label="Remote workers percentage slider">
-                                    <div class="govuk-slider__labels">
-                                        <span>0%</span>
-                                        <span>50%</span>
-                                        <span>100%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="govuk-form-group">
-                                <label class="govuk-label" for="remote-display">
-                                    Selected remote working percentage
-                                </label>
-                                <div class="govuk-display-value">
-                                    <span id="remote-display" class="govuk-display-value__text"></span>
-                                    <input type="hidden" id="remote-percentage" name="remote_percentage" required>
+                                           value="0">
+                                    <div id="remote-display" class="govuk-slider__labels"></div>
+                                    <!-- Add hidden input for form data -->
+                                    <input type="hidden" id="remote-percentage" name="remote_percentage" value="0">
                                 </div>
                             </div>
                         </fieldset>
@@ -621,7 +639,7 @@
                             <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="data-pii" 
-                                           name="sensitive_data" type="checkbox" value="pii">
+                                           name="data-pii" type="checkbox" value="pii">
                                     <label class="govuk-label govuk-checkboxes__label" for="data-pii">
                                         Personal Identifiable Information (PII)
                                     </label>
@@ -631,7 +649,7 @@
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="data-payment" 
-                                           name="sensitive_data" type="checkbox" value="payment">
+                                           name="data-payment" type="checkbox" value="payment">
                                     <label class="govuk-label govuk-checkboxes__label" for="data-payment">
                                         Payment Information
                                     </label>
@@ -641,7 +659,7 @@
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="data-health" 
-                                           name="sensitive_data" type="checkbox" value="health">
+                                           name="data-health" type="checkbox" value="health">
                                     <label class="govuk-label govuk-checkboxes__label" for="data-health">
                                         Health Records
                                     </label>
@@ -651,7 +669,7 @@
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="data-financial" 
-                                           name="sensitive_data" type="checkbox" value="financial">
+                                           name="data-financial" type="checkbox" value="financial">
                                     <label class="govuk-label govuk-checkboxes__label" for="data-financial">
                                         Financial Records
                                     </label>
@@ -661,7 +679,7 @@
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="data-intellectual" 
-                                           name="sensitive_data" type="checkbox" value="intellectual">
+                                           name="data-intellectual" type="checkbox" value="intellectual">
                                     <label class="govuk-label govuk-checkboxes__label" for="data-intellectual">
                                         Intellectual Property
                                     </label>
@@ -692,21 +710,21 @@
                                 <div class="govuk-checkboxes">
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="asset-websites" 
-                                               name="public_assets" type="checkbox" value="websites">
+                                               name="asset-websites" type="checkbox" value="websites">
                                         <label class="govuk-label govuk-checkboxes__label" for="asset-websites">
                                             Public Websites
                                         </label>
                                     </div>
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="asset-apis" 
-                                               name="public_assets" type="checkbox" value="apis">
+                                               name="asset-apis" type="checkbox" value="apis">
                                         <label class="govuk-label govuk-checkboxes__label" for="asset-apis">
                                             Public APIs
                                         </label>
                                     </div>
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="asset-mobile" 
-                                               name="public_assets" type="checkbox" value="mobile">
+                                               name="asset-mobile" type="checkbox" value="mobile">
                                         <label class="govuk-label govuk-checkboxes__label" for="asset-mobile">
                                             Mobile Applications
                                         </label>
@@ -722,7 +740,7 @@
                                 <div class="govuk-checkboxes">
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="infra-cloud" 
-                                               name="infrastructure" type="checkbox" value="cloud">
+                                               name="infra-cloud" type="checkbox" value="cloud">
                                         <label class="govuk-label govuk-checkboxes__label" for="infra-cloud">
                                             Cloud Infrastructure
                                         </label>
@@ -732,14 +750,14 @@
                                     </div>
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="infra-onprem" 
-                                               name="infrastructure" type="checkbox" value="onprem">
+                                               name="infra-onprem" type="checkbox" value="onprem">
                                         <label class="govuk-label govuk-checkboxes__label" for="infra-onprem">
                                             On-premises Data Centers
                                         </label>
                                     </div>
                                     <div class="govuk-checkboxes__item">
                                         <input class="govuk-checkboxes__input" id="infra-ip" 
-                                               name="infrastructure" type="checkbox" value="own_ip">
+                                               name="infra-ip" type="checkbox" value="own_ip">
                                         <label class="govuk-label govuk-checkboxes__label" for="infra-ip">
                                             Own IP Prefixes
                                         </label>
@@ -765,7 +783,7 @@
                                         <!-- Copilot Section -->
                                         <div class="govuk-checkboxes__item">
                                             <input class="govuk-checkboxes__input" id="ai-copilot" 
-                                                   name="ai_usage" type="checkbox" value="copilot"
+                                                   name="ai-copilot" type="checkbox" value="copilot"
                                                    aria-controls="copilot-conditional"
                                                    aria-expanded="false">
                                             <label class="govuk-label govuk-checkboxes__label" for="ai-copilot">
@@ -778,42 +796,42 @@
                                         <!-- Copilot Conditional -->
                                         <div class="govuk-checkboxes__conditional govuk-checkboxes__conditional--hidden" 
                                              id="copilot-conditional">
-                                            <div class="govuk-form-group">
-                                                <fieldset class="govuk-fieldset">
-                                                    <legend class="govuk-fieldset__legend">
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend">
                                                         How are AI assistants used in your organization?
-                                                    </legend>
+                            </legend>
                                                     <div class="govuk-checkboxes govuk-checkboxes--small">
                                                         <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="copilot-unrestricted" 
                                                                    name="copilot_usage" type="checkbox" value="unrestricted">
                                                             <label class="govuk-label govuk-checkboxes__label" for="copilot-unrestricted">
                                                                 Unrestricted usage
-                                                            </label>
-                                                        </div>
+                                    </label>
+                                </div>
                                                         <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="copilot-approved" 
                                                                    name="copilot_usage" type="checkbox" value="approved_only">
                                                             <label class="govuk-label govuk-checkboxes__label" for="copilot-approved">
                                                                 Only approved assistants
-                                                            </label>
-                                                        </div>
+                                    </label>
+                                </div>
                                                         <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="copilot-policy" 
                                                                    name="copilot_usage" type="checkbox" value="with_policy">
                                                             <label class="govuk-label govuk-checkboxes__label" for="copilot-policy">
                                                                 Usage policy in place
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
                                             </div>
-                                        </div>
+                    </div>
 
                                         <!-- Approved Tools Section -->
                                         <div class="govuk-checkboxes__item">
                                             <input class="govuk-checkboxes__input" id="ai-approved-tools" 
-                                                   name="ai_usage" type="checkbox" value="approved_tools"
+                                                   name="ai-approved-tools" type="checkbox" value="approved_tools"
                                                    aria-controls="approved-tools-conditional"
                                                    aria-expanded="false">
                                             <label class="govuk-label govuk-checkboxes__label" for="ai-approved-tools">
@@ -826,33 +844,33 @@
                                         <!-- Approved Tools Conditional -->
                                         <div class="govuk-checkboxes__conditional govuk-checkboxes__conditional--hidden" 
                                              id="approved-tools-conditional">
-                                            <div class="govuk-form-group">
-                                                <fieldset class="govuk-fieldset">
-                                                    <legend class="govuk-fieldset__legend">
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend">
                                                         What types of approved AI tools are used?
-                                                    </legend>
+                            </legend>
                                                     <div class="govuk-checkboxes govuk-checkboxes--small">
-                                                        <div class="govuk-checkboxes__item">
+                                <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="tools-analytics" 
                                                                    name="ai_tools" type="checkbox" value="analytics">
                                                             <label class="govuk-label govuk-checkboxes__label" for="tools-analytics">
                                                                 Analytics and Insights
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
+                                    </label>
+                                </div>
+                                <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="tools-automation" 
                                                                    name="ai_tools" type="checkbox" value="automation">
                                                             <label class="govuk-label govuk-checkboxes__label" for="tools-automation">
                                                                 Process Automation
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
+                                    </label>
+                                </div>
+                                <div class="govuk-checkboxes__item">
                                                             <input class="govuk-checkboxes__input" id="tools-security" 
                                                                    name="ai_tools" type="checkbox" value="security">
                                                             <label class="govuk-label govuk-checkboxes__label" for="tools-security">
                                                                 Security and Monitoring
-                                                            </label>
-                                                        </div>
+                                    </label>
+                                </div>
                                                     </div>
                                                 </fieldset>
                                             </div>
@@ -861,7 +879,7 @@
                                         <!-- ML Models Section -->
                                         <div class="govuk-checkboxes__item">
                                             <input class="govuk-checkboxes__input" id="ai-ml-models" 
-                                                   name="ai_usage" type="checkbox" value="ml_models"
+                                                   name="ai-ml-models" type="checkbox" value="ml_models"
                                                    data-aria-controls="ml-models-conditional">
                                             <label class="govuk-label govuk-checkboxes__label" for="ai-ml-models">
                                                 Custom Machine Learning Models
@@ -907,7 +925,7 @@
                                         <!-- AI Applications Section -->
                                         <div class="govuk-checkboxes__item">
                                             <input class="govuk-checkboxes__input" id="ai-applications" 
-                                                   name="ai_usage" type="checkbox" value="ai_applications"
+                                                   name="ai-applications" type="checkbox" value="ai_applications"
                                                    data-aria-controls="ai-applications-conditional">
                                             <label class="govuk-label govuk-checkboxes__label" for="ai-applications">
                                                 AI-Based Applications
@@ -982,28 +1000,28 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-ddos" 
-                                           name="security_controls" type="checkbox" value="ddos">
+                                           name="security-ddos" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-ddos">
                                         DDoS Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-waf" 
-                                           name="security_controls" type="checkbox" value="waf">
+                                           name="security-waf" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-waf">
                                         Web Application Firewall (WAF)
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-bot" 
-                                           name="security_controls" type="checkbox" value="bot">
+                                           name="security-bot" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-bot">
                                         Bot Management
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-lb" 
-                                           name="security_controls" type="checkbox" value="load_balancing">
+                                           name="security-lb" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-lb">
                                         Load Balancing
                                     </label>
@@ -1015,14 +1033,14 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-vpn" 
-                                           name="security_controls" type="checkbox" value="vpn_ztna">
+                                           name="security-vpn" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-vpn">
                                         VPN/Zero Trust Network Access
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-ai-gateway" 
-                                           name="security_controls" type="checkbox" value="ai_gateway">
+                                           name="security-ai-gateway" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-ai-gateway">
                                         AI Gateway
                                     </label>
@@ -1034,21 +1052,21 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-dlp" 
-                                           name="security_controls" type="checkbox" value="dlp">
+                                           name="security-dlp" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-dlp">
                                         Data Loss Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-phishing" 
-                                           name="security_controls" type="checkbox" value="phishing">
+                                           name="security-phishing" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-phishing">
                                         Phishing Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-brand" 
-                                           name="security_controls" type="checkbox" value="brand">
+                                           name="security-brand" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-brand">
                                         Brand Intelligence
                                     </label>
@@ -1060,21 +1078,21 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-user-filter" 
-                                           name="security_controls" type="checkbox" value="user_filtering">
+                                           name="security-user-filter" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-user-filter">
                                         User Web Filtering
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-server-filter" 
-                                           name="security_controls" type="checkbox" value="server_filtering">
+                                           name="security-server-filter" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-server-filter">
                                         Server Web Filtering
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-endpoint" 
-                                           name="security_controls" type="checkbox" value="endpoint">
+                                           name="security-endpoint" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-endpoint">
                                         Endpoint Management
                                     </label>
@@ -1139,7 +1157,41 @@
             <div id="review-section" class="form-section" hidden>
                 <h1 class="govuk-heading-l">Review your answers</h1>
                 <dl class="govuk-summary-list">
-                    <!-- Will be populated by JavaScript -->
+                    <!-- Organisation Details -->
+                    <div class="govuk-summary-list__row govuk-summary-list__row--header">
+                        <dt class="govuk-summary-list__key govuk-heading-m">
+                            Organisation Details
+                        </dt>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="#" data-section="organisation">
+                                Change<span class="govuk-visually-hidden"> Organisation Details</span>
+                            </a>
+                        </dd>
+                    </div>
+
+                    <!-- Exposure Details -->
+                    <div class="govuk-summary-list__row govuk-summary-list__row--header">
+                        <dt class="govuk-summary-list__key govuk-heading-m">
+                            Exposure Assessment
+                        </dt>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="#" data-section="exposure">
+                                Change<span class="govuk-visually-hidden"> Exposure Assessment</span>
+                            </a>
+                        </dd>
+                    </div>
+
+                    <!-- Security Controls -->
+                    <div class="govuk-summary-list__row govuk-summary-list__row--header">
+                        <dt class="govuk-summary-list__key govuk-heading-m">
+                            Security Controls
+                        </dt>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="#" data-section="security">
+                                Change<span class="govuk-visually-hidden"> Security Controls</span>
+                            </a>
+                        </dd>
+                    </div>
                 </dl>
 
                 <div class="govuk-button-group">
