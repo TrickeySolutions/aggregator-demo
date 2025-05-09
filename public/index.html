@@ -33,6 +33,10 @@
 
         .govuk-header__logotype-crown {
             margin-right: 0;
+            filter: brightness(0) invert(1);  /* Makes the mini logo white */
+            width: 36px;
+            height: auto;
+            object-fit: contain;
         }
 
         .govuk-header__logotype-text {
@@ -42,10 +46,13 @@
         }
 
         .govuk-header__content {
-            padding-left: 0;
+            padding-left: 30px;
+            border-left: 1px solid #ffffff40;
         }
 
         .govuk-header__link--service-name {
+            color: #ffffff !important;
+            font-weight: 700;
             text-decoration: none;
         }
 
