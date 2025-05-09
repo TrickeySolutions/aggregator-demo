@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Results - Cyber Insurance Platform</title>
+    <link rel="stylesheet" href="/govuk-frontend/govuk.min.css">
+    <!-- Include header styles -->
+    <style>
+        .govuk-header {
+            background-color: #0b0c0c;
+            border-bottom: 10px solid #1d70b8;
+        }
+
+        .govuk-header__container {
+            border-bottom: none;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .govuk-header__logo {
+            padding-right: 0;
+        }
+
+        .govuk-header__link--homepage {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none !important;
+        }
+
+        .govuk-header__link--homepage:hover {
+            text-decoration: none !important;
+        }
+
+        .govuk-header__logotype-crown {
+            margin-right: 0;
+            filter: brightness(0) invert(1);
+            width: 36px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .govuk-header__content {
+            padding-left: 30px;
+            border-left: 1px solid #ffffff40;
+        }
+
+        .govuk-header__link--service-name {
+            color: #ffffff !important;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .govuk-header__link--service-name:hover {
+            text-decoration: underline;
+            text-decoration-thickness: 3px;
+        }
+
+        .quote-results {
+            margin-top: 30px;
+        }
+
+        .quote-results__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .quote-partner {
+            border: 1px solid #b1b4b6;
+            padding: 20px;
+            margin-bottom: 0; /* Remove margin as we're using grid gap */
+            border-radius: 4px;
+        }
+
+        .quote-partner--processing {
+            background-color: #f3f2f1;
+        }
+
+        .quote-partner__status {
+            color: #505a5f;
+            margin-bottom: 10px;
+        }
+
+        .quote-partner__price {
+            font-size: 36px;
+            font-weight: bold;
+            color: #00703c;
+        }
+
+        .quote-partner__loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #1d70b8;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @font-face {
+            font-family: 'Calculator';
+            src: url('https://trickey.solutions/content/fonts/Calculator.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        .trickey-logo-text {
+            font-family: 'Calculator', sans-serif;
+            font-size: 40px;
+            background: linear-gradient(180deg, #9da832 0%, #4a5a28 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-left: 10px;
+            padding: 0;
+            line-height: 36px;
+            display: inline-block;
+            vertical-align: middle;
+            text-shadow: 
+                -1px -1px 0 rgba(255,255,255,0.2),
+                1px -1px 0 rgba(255,255,255,0.2),
+                -1px 1px 0 rgba(255,255,255,0.2),
+                1px 1px 0 rgba(255,255,255,0.2);
+        }
+
+        /* Add status panel styles */
+        .govuk-panel--processing {
+            background-color: #1d70b8;
+        }
+        
+        .govuk-panel--error {
+            background-color: #d4351c;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include the same header as other pages -->
+    <header class="govuk-header" role="banner" data-module="govuk-header">
+        <div class="govuk-header__container govuk-width-container">
+            <div class="govuk-header__logo">
+                <a href="/" class="govuk-header__link govuk-header__link--homepage">
+                    <img src="https://trickey.solutions/media/gg3i2lr1/minime.png" 
+                         alt="Trickey Solutions Mini Logo" 
+                         class="govuk-header__logotype-crown"
+                         width="36" height="36">
+                    <span class="trickey-logo-text">Trickey.Solutions</span>
+                </a>
+            </div>
+            <div class="govuk-header__content">
+                <a href="/" class="govuk-header__link govuk-header__link--service-name govuk-!-font-size-36">
+                    Cyber Insurance Platform
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="govuk-width-container">
+        <main class="govuk-main-wrapper" id="main-content" role="main">
+            <h1 class="govuk-heading-l">Your Quote Results</h1>
+            
+            <!-- Add status section -->
+            <div class="govuk-panel govuk-panel--confirmation activity-status">
+                <h2 class="govuk-panel__title">
+                    <span id="org-name">Loading...</span>
+                </h2>
+                <div class="govuk-panel__body">
+                    Status: <span id="activity-status">Loading...</span>
+                </div>
+            </div>
+
+            <div class="quote-results">
+                <h2 class="govuk-heading-m">Partner Quotes</h2>
+                <div id="partner-quotes" class="quote-results__grid">
+                    <!-- Partner quotes will be inserted here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        class QuoteResults {
+            constructor() {
+                this.ws = null;
+                // Extract IDs from URL path instead of query string
+                const pathParts = window.location.pathname.split('/');
+                this.customerId = pathParts[2];
+                this.activityId = pathParts[4];
+                this.setupWebSocket();
+            }
+
+            setupWebSocket() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                this.ws = new WebSocket(`${wsProtocol}//${location.host}/api/customer/${this.customerId}/activity/${this.activityId}`);
+                
+                this.ws.addEventListener('message', (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'state_update') {
+                        this.updateStatus(data.state);
+                        this.updateQuotes(data.state.quotes);
+                    }
+                });
+
+                // Add error handling
+                this.ws.addEventListener('error', (error) => {
+                    console.error('WebSocket error:', error);
+                });
+            }
+
+            updateStatus(state) {
+                // Update organization name
+                const orgName = state.formData?.organisation?.name || 'Unknown Organization';
+                document.getElementById('org-name').textContent = orgName;
+
+                // Update status with friendly message
+                const statusMessages = {
+                    'processing': 'Processing your submission...',
+                    'getting_quotes': 'Getting quotes from partners...',
+                    'completed': 'All quotes received',
+                    'error': 'An error occurred'
+                };
+                
+                document.getElementById('activity-status').textContent = 
+                    statusMessages[state.status] || state.status;
+                
+                // Update panel styling based on status
+                const panel = document.querySelector('.activity-status');
+                panel.className = `govuk-panel ${this.getStatusClass(state.status)}`;
+            }
+
+            getStatusClass(status) {
+                switch(status) {
+                    case 'completed':
+                        return 'govuk-panel--confirmation';
+                    case 'error':
+                        return 'govuk-panel--error';
+                    default:
+                        return 'govuk-panel--processing';
+                }
+            }
+
+            updateQuotes(quotes) {
+                const container = document.getElementById('partner-quotes');
+                container.innerHTML = '';
+
+                Object.entries(quotes).forEach(([partnerId, quote]) => {
+                    container.innerHTML += `
+                        <div class="quote-partner ${quote.status === 'processing' ? 'quote-partner--processing' : ''}">
+                            <h3 class="govuk-heading-s">${quote.partnerName}</h3>
+                            <div class="quote-partner__status">
+                                ${this.getStatusHTML(quote.status)}
+                            </div>
+                            ${quote.price ? `
+                                <div class="quote-partner__price">
+                                    £${quote.price.toLocaleString()}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            getStatusHTML(status) {
+                switch (status) {
+                    case 'processing':
+                        return `<span class="quote-partner__loading"></span> Getting quote...`;
+                    case 'complete':
+                        return `Quote received`;
+                    case 'error':
+                        return `<span class="govuk-error-message">Failed to get quote</span>`;
+                    default:
+                        return status;
+                }
+            }
+        }
+
+        new QuoteResults();
+    </script>
+</body>
+</html> 
