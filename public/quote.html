@@ -348,6 +348,57 @@
         .govuk-checkboxes__conditional--hidden {
             display: none !important;
         }
+
+        /* Responsive styles for progress bar */
+        @media (max-width: 768px) {
+            .moj-progress-bar__list {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .moj-progress-bar__item {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 140px;
+            }
+
+            .moj-progress-bar__label {
+                font-size: 14px;
+                white-space: normal;
+                text-align: center;
+                line-height: 1.2;
+            }
+        }
+
+        /* Even smaller screens */
+        @media (max-width: 480px) {
+            .moj-progress-bar__item {
+                flex: 1 1 100%;
+            }
+
+            .moj-progress-bar__label {
+                font-size: 16px;
+            }
+
+            /* Adjust main content padding */
+            .govuk-main-wrapper {
+                padding: 20px 15px;
+            }
+
+            /* Adjust section headings */
+            .govuk-heading-l {
+                font-size: 24px;
+                word-wrap: break-word;
+            }
+        }
+
+        /* Fix container width on small screens */
+        @media (max-width: 40.0625em) {
+            .govuk-width-container {
+                margin-right: 15px;
+                margin-left: 15px;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="govuk-template__body">
@@ -949,28 +1000,28 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-ddos" 
-                                           name="security_controls" type="checkbox" value="ddos">
+                                           name="security-ddos" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-ddos">
                                         DDoS Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-waf" 
-                                           name="security_controls" type="checkbox" value="waf">
+                                           name="security-waf" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-waf">
                                         Web Application Firewall (WAF)
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-bot" 
-                                           name="security_controls" type="checkbox" value="bot">
+                                           name="security-bot" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-bot">
                                         Bot Management
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-lb" 
-                                           name="security_controls" type="checkbox" value="load_balancing">
+                                           name="security-lb" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-lb">
                                         Load Balancing
                                     </label>
@@ -982,14 +1033,14 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-vpn" 
-                                           name="security_controls" type="checkbox" value="vpn_ztna">
+                                           name="security-vpn" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-vpn">
                                         VPN/Zero Trust Network Access
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-ai-gateway" 
-                                           name="security_controls" type="checkbox" value="ai_gateway">
+                                           name="security-ai-gateway" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-ai-gateway">
                                         AI Gateway
                                     </label>
@@ -1001,21 +1052,21 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-dlp" 
-                                           name="security_controls" type="checkbox" value="dlp">
+                                           name="security-dlp" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-dlp">
                                         Data Loss Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-phishing" 
-                                           name="security_controls" type="checkbox" value="phishing">
+                                           name="security-phishing" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-phishing">
                                         Phishing Protection
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-brand" 
-                                           name="security_controls" type="checkbox" value="brand">
+                                           name="security-brand" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-brand">
                                         Brand Intelligence
                                     </label>
@@ -1027,21 +1078,21 @@
                             <div class="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-user-filter" 
-                                           name="security_controls" type="checkbox" value="user_filtering">
+                                           name="security-user-filter" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-user-filter">
                                         User Web Filtering
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-server-filter" 
-                                           name="security_controls" type="checkbox" value="server_filtering">
+                                           name="security-server-filter" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-server-filter">
                                         Server Web Filtering
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
                                     <input class="govuk-checkboxes__input" id="security-endpoint" 
-                                           name="security_controls" type="checkbox" value="endpoint">
+                                           name="security-endpoint" type="checkbox" value="true">
                                     <label class="govuk-label govuk-checkboxes__label" for="security-endpoint">
                                         Endpoint Management
                                     </label>

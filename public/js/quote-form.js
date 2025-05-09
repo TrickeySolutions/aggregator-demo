@@ -129,13 +129,18 @@ class QuoteForm {
                 // Request initial state
                 this.ws.send(JSON.stringify({ type: 'get_state' }));
             });
-
+            
             this.ws.addEventListener('message', (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     if (data.type === 'state_update') {
                         this.formState = data.state;
                         this.updateFormFromState();
+                        
+                        // Add this: Update review section if we're currently viewing it
+                        if (this.currentSection === 'review') {
+                            this.updateReviewSection();
+                        }
                     }
                 } catch (err) {
                     console.error('Failed to parse WebSocket message:', err);
@@ -161,23 +166,6 @@ class QuoteForm {
             if (!form) return;
 
             Object.entries(data).forEach(([key, value]) => {
-                // Handle checkbox groups
-                if (Array.isArray(value)) {
-                    // Clear all checkboxes first
-                    form.querySelectorAll(`input[name="${key}"]`).forEach(checkbox => {
-                        checkbox.checked = false;
-                    });
-                    // Check the ones in the value array
-                    value.forEach(val => {
-                        const checkbox = form.querySelector(`input[name="${key}"][value="${val}"]`);
-                        if (checkbox) {
-                            checkbox.checked = true;
-                            checkbox.dispatchEvent(new Event('change'));
-                        }
-                    });
-                    return;
-                }
-
                 const input = form.querySelector(`[name="${key}"]`);
                 if (!input) return;
 
@@ -480,71 +468,86 @@ class QuoteForm {
             exposure: {
                 title: 'Exposure Assessment',
                 fields: {
-                    ai_usage: 'AI/ML Systems',
-                    ai_purpose: 'AI Purpose',
-                    ai_decisions: 'AI Decision Making',
-                    data_types: 'Types of Data',
-                    data_volume: 'Data Volume',
-                    pii_records: 'PII Records'
+                    'data-pii': 'Personal Identifiable Information',
+                    'data-payment': 'Payment Information',
+                    'data-health': 'Health Records',
+                    'data-financial': 'Financial Records',
+                    'data-intellectual': 'Intellectual Property',
+                    'asset-websites': 'Public Websites',
+                    'asset-apis': 'Public APIs',
+                    'asset-mobile': 'Mobile Applications',
+                    'infra-cloud': 'Cloud Infrastructure',
+                    'infra-onprem': 'On-premises Data Centers',
+                    'infra-ip': 'Own IP Prefixes',
+                    'ai-copilot': 'AI Assistants/Copilots',
+                    'ai-approved-tools': 'Approved AI Tools',
+                    'ai-ml-models': 'Custom ML Models',
+                    'ai-applications': 'AI-Based Applications'
                 }
             },
             security: {
                 title: 'Security Controls',
                 fields: {
-                    security_controls: 'Security Controls',
-                    incident_response: 'Incident Response',
-                    backup_frequency: 'Backup Frequency',
-                    training_frequency: 'Security Training',
-                    compliance: 'Compliance Standards'
+                    'security-ddos': 'DDoS Protection',
+                    'security-waf': 'Web Application Firewall (WAF)',
+                    'security-bot': 'Bot Management',
+                    'security-lb': 'Load Balancing',
+                    'security-vpn': 'VPN/Zero Trust Network Access',
+                    'security-ai-gateway': 'AI Gateway',
+                    'security-dlp': 'Data Loss Protection',
+                    'security-phishing': 'Phishing Protection',
+                    'security-brand': 'Brand Intelligence',
+                    'security-user-filter': 'User Web Filtering',
+                    'security-server-filter': 'Server Web Filtering',
+                    'security-endpoint': 'Endpoint Management'
                 }
             }
         };
 
-        // Add each section
-        Object.entries(sections).forEach(([sectionId, config]) => {
-            const sectionData = this.formState.formData[sectionId];
-            if (!sectionData) return;
-
-            // Add section header
-            const header = document.createElement('div');
-            header.className = 'govuk-summary-list__row govuk-summary-list__row--header';
-            header.innerHTML = `
-                <dt class="govuk-summary-list__key govuk-heading-m">
-                    ${config.title}
-                </dt>
-                <dd class="govuk-summary-list__actions">
-                    <a class="govuk-link" href="#" data-section="${sectionId}">
-                        Change<span class="govuk-visually-hidden"> ${config.title}</span>
-                    </a>
-                </dd>
+        // Create section rows
+        Object.entries(sections).forEach(([sectionId, section]) => {
+            // Add section header with aligned structure
+            dl.innerHTML += `
+                <div class="govuk-summary-list__row govuk-summary-list__row--header">
+                    <dt class="govuk-summary-list__key govuk-heading-m">
+                        ${section.title}
+                    </dt>
+                    <dd class="govuk-summary-list__value">
+                        <!-- Empty value cell to maintain alignment -->
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                        <a class="govuk-link" href="#" data-section="${sectionId}">
+                            Change<span class="govuk-visually-hidden"> ${section.title}</span>
+                        </a>
+                    </dd>
+                </div>
             `;
-            dl.appendChild(header);
 
-            // Add fields for this section
-            Object.entries(config.fields).forEach(([fieldName, label]) => {
-                let value = sectionData[fieldName];
-                if (value !== undefined && value !== '') {
-                    const row = document.createElement('div');
-                    row.className = 'govuk-summary-list__row';
-                    row.innerHTML = `
+            // Add field rows
+            const sectionData = this.formState.formData[sectionId] || {};
+            Object.entries(section.fields).forEach(([key, label]) => {
+                const value = sectionData[key];
+                
+                // Skip if no value or false for checkboxes
+                if (value === undefined || value === false || (Array.isArray(value) && value.length === 0)) {
+                    return;
+                }
+
+                dl.innerHTML += `
+                    <div class="govuk-summary-list__row">
                         <dt class="govuk-summary-list__key">
                             ${label}
                         </dt>
                         <dd class="govuk-summary-list__value">
                             ${this.formatReviewValue(value)}
                         </dd>
-                    `;
-                    dl.appendChild(row);
-                }
-            });
-        });
-
-        // Add event listeners for "Change" links
-        dl.querySelectorAll('[data-section]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const section = e.currentTarget.dataset.section;
-                this.showSection(section);
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="#" data-section="${sectionId}">
+                                Change<span class="govuk-visually-hidden"> ${label}</span>
+                            </a>
+                        </dd>
+                    </div>
+                `;
             });
         });
     }
@@ -553,14 +556,21 @@ class QuoteForm {
         if (Array.isArray(value)) {
             return value.map(v => this.formatSingleValue(v)).join('<br>');
         }
+        if (typeof value === 'boolean') {
+            return value ? 'Yes' : 'No';
+        }
+        if (value === 'true') {
+            return 'Yes';
+        }
+        if (value === 'false') {
+            return 'No';
+        }
         return this.formatSingleValue(value);
     }
 
     formatSingleValue(value) {
-        if (typeof value === 'boolean') {
-            return value ? 'Yes' : 'No';
-        }
-        if (typeof value === 'number') {
+        // Handle currency values
+        if (typeof value === 'number' && !isNaN(value)) {
             if (value >= 1000000) {
                 return new Intl.NumberFormat('en-GB', {
                     style: 'currency',
@@ -574,6 +584,15 @@ class QuoteForm {
                 currency: 'GBP'
             }).format(value);
         }
+        
+        // Format checkbox values to be more readable
+        if (typeof value === 'string') {
+            return value
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
         return value || 'Not provided';
     }
 
@@ -583,7 +602,7 @@ class QuoteForm {
             if (!form) return;
 
             // Add blur and input handlers for real-time updates
-            form.querySelectorAll('input, select').forEach(input => {
+                form.querySelectorAll('input, select').forEach(input => {
                 // Update on blur
                 input.addEventListener('blur', async () => {
                     this.touchedFields.add(input.id);
@@ -609,48 +628,22 @@ class QuoteForm {
         const formData = new FormData(form);
         const sectionData = {};
         
-        // Get all form inputs to handle checkbox groups and selects
         const inputs = form.querySelectorAll('input, select');
         
         inputs.forEach(input => {
             const name = input.name;
-            
-            // Skip if no name attribute
             if (!name) return;
             
-            // Handle checkbox groups (multiple checkboxes with same name)
             if (input.type === 'checkbox') {
-                if (name.endsWith('[]')) {
-                    // Array-style checkboxes
-                    const baseName = name.slice(0, -2);
-                    if (!sectionData[baseName]) {
-                        sectionData[baseName] = [];
-                    }
-                    if (input.checked) {
-                        sectionData[baseName].push(input.value);
-                    }
-                } else if (name === 'security_controls' || name === 'ai_usage' || name === 'ai_applications') {
-                    // Handle multi-select checkboxes
-                    if (!sectionData[name]) {
-                        sectionData[name] = [];
-                    }
-                    if (input.checked) {
-                        sectionData[name].push(input.value);
-                    }
-                } else {
-                    // Single checkboxes (like PII)
-                    sectionData[name] = input.checked;
-                }
+                // Handle all checkboxes as individual boolean fields
+                sectionData[name] = input.checked;
             } else if (input.tagName.toLowerCase() === 'select') {
-                // Handle select elements
                 sectionData[name] = input.value;
             } else {
-                // Handle all other input types
                 sectionData[name] = formData.get(name);
             }
         });
 
-        // Send update via WebSocket
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 type: 'form_update',
