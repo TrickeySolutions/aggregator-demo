@@ -18,15 +18,17 @@
         }
 
         .govuk-header__logo {
-            width: auto;
-            padding-right: 30px;
+            padding-right: 0;
         }
 
         .govuk-header__link--homepage {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 15px;
-            text-decoration: none;
+            text-decoration: none !important;
+        }
+
+        .govuk-header__link--homepage:hover {
+            text-decoration: none !important;
         }
 
         .govuk-header__logotype-crown {
@@ -51,10 +53,12 @@
         .govuk-header__link--service-name {
             color: #ffffff !important;
             font-weight: 700;
+            text-decoration: none;
         }
 
-        .govuk-header__link:hover {
+        .govuk-header__link--service-name:hover {
             text-decoration: underline;
+            text-decoration-thickness: 3px;
         }
 
         /* Progress bar styles */
@@ -399,6 +403,72 @@
                 max-width: 100%;
             }
         }
+
+        /* Add custom font */
+        @font-face {
+            font-family: 'Calculator';
+            src: url('https://trickey.solutions/content/fonts/Calculator.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        /* Logo text styling */
+        .trickey-logo-text {
+            font-family: 'Calculator', sans-serif;
+            font-size: 40px;
+            background: linear-gradient(180deg, #9da832 0%, #4a5a28 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-left: 10px;
+            padding: 0;
+            line-height: 36px;
+            display: inline-block;
+            vertical-align: middle;
+            text-shadow: 
+                -1px -1px 0 rgba(255,255,255,0.2),
+                1px -1px 0 rgba(255,255,255,0.2),
+                -1px 1px 0 rgba(255,255,255,0.2),
+                1px 1px 0 rgba(255,255,255,0.2);
+        }
+
+        /* Header logo section adjustments */
+        .govuk-header__logo {
+            padding-right: 0;
+        }
+
+        .govuk-header__link--homepage {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none !important;
+        }
+
+        .govuk-header__link--homepage:hover {
+            text-decoration: none !important;
+        }
+
+        .govuk-header__logotype-crown {
+            margin-right: 0;
+        }
+
+        /* Service name link styling */
+        .govuk-header__link--service-name {
+            text-decoration: none;
+        }
+
+        .govuk-header__link--service-name:hover {
+            text-decoration: underline;
+            text-decoration-thickness: 3px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .trickey-logo-text {
+                font-size: 32px;  /* Slightly smaller on mobile */
+            }
+            .govuk-header__content {
+                padding-left: 0;
+            }
+        }
     </style>
 </head>
 <body class="govuk-template__body">
@@ -412,10 +482,7 @@
                          alt="Trickey Solutions Mini Logo" 
                          class="govuk-header__logotype-crown"
                          width="36" height="36">
-                    <img src="https://trickey.solutions/media/1kggv10k/trickeysolutionshorizontaltextlogo.png"
-                         alt="Trickey Solutions"
-                         class="govuk-header__logotype-text"
-                         height="36">
+                    <span class="trickey-logo-text">Trickey.Solutions</span>
                 </a>
             </div>
             <div class="govuk-header__content">
