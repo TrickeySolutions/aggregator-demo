@@ -49,7 +49,8 @@ npm run setup-govuk
 Make sure your `wrangler.jsonc` is properly configured with your account details.
 
 4. Create required Cloudflare Queues:
-### Note: This step is only required if you are deploying to Cloudflare. If you are running locally, you can skip this step.
+> **Note:** This step is only required if you are deploying to Cloudflare. 
+> _If you are running locally, you can skip this step._
 ```bash
 npx wrangler queues create activity-submission
 npx wrangler queues create partner-quotes
