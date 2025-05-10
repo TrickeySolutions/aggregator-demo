@@ -1,6 +1,6 @@
 # Cyber Insurance Quote Platform
 
-A web application for generating cyber insurance quotes, built using Cloudflare Workers and Durable Objects. The application follows the GOV.UK Design System for a consistent and accessible user experience.
+A demonstration web application for generating cyber insurance quotes, built using Cloudflare Workers and Durable Objects. The application follows the GOV.UK Design System for a consistent and accessible user experience.  It can be used to demonstrate some architecture patterns and features of Cloudflare Workers and Durable Objects.
 
 ## Features
 
@@ -49,7 +49,7 @@ npm run setup-govuk
 Make sure your `wrangler.jsonc` is properly configured with your account details.
 
 4. Create required Cloudflare Queues:
-Note: This step is only required if you are deploying to Cloudflare. If you are running locally, you can skip this step.
+### Note: This step is only required if you are deploying to Cloudflare. If you are running locally, you can skip this step.
 ```bash
 npx wrangler queues create activity-submission
 npx wrangler queues create partner-quotes
