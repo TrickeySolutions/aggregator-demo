@@ -15,6 +15,7 @@ import { RiskProfile } from './types/risk-profile';
 import { handleActivitySubmission } from './workflows/activity-submission';
 import { handlePartnerQuote } from './workflows/partner-quotes';
 import { ActivitySubmissionMessage, PartnerQuoteMessage } from './types/messages';
+import { PartnerQuoteWorkflow } from './workflows/partner-quotes';
 
 // Queue message types
 interface QueueMessageData {
@@ -32,6 +33,7 @@ export interface Env {
 	ACTIVITY: DurableObjectNamespace;
 	ACTIVITY_SUBMISSION_QUEUE: Queue;
 	PARTNER_QUOTES_QUEUE: Queue;
+	PARTNER_QUOTE_WORKFLOW: WorkflowNamespace<PartnerQuoteParams>;
 }
 
 export default {
@@ -117,19 +119,33 @@ export default {
 	},
 
 	// Queue handler with correct typing
-	async queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
+	async queue(batch: MessageBatch<unknown>, env: Env, ctx: ExecutionContext): Promise<void> {
 		console.log('Queue consumer started, processing batch of:', batch.messages.length);
 		
 		for (const message of batch.messages) {
-			console.log('Queue message received');
 			try {
 				const body = message.body as QueueMessageData;
 				
 				// Determine queue type from message content
 				if ('formData' in body && !('quoteData' in body)) {
-					await handleActivitySubmission(body as ActivitySubmissionMessage, env);
+					console.log('Queue message received : activity submission');
+					// Fire and forget - don't await the result
+					ctx.waitUntil(
+						handleActivitySubmission(body as ActivitySubmissionMessage, env)
+							.catch(error => console.error('Activity submission error:', error))
+					);
 				} else if ('quoteData' in body && 'partnerId' in body) {
-					await handlePartnerQuote(body as PartnerQuoteMessage);
+					// Instead of calling the function, create a workflow instance
+					console.log('Creating partner quote workflow');
+					ctx.waitUntil(
+						env.PARTNER_QUOTE_WORKFLOW.create({
+							params: {
+								activityId: body.activityId,
+								partnerId: body.partnerId,
+								quoteData: body.quoteData
+							}
+						}).catch(error => console.error('Failed to create workflow:', error))
+					);
 				} else {
 					console.error('Unknown message type:', body);
 					continue;
@@ -153,3 +169,4 @@ async function createNewCustomer(env: Env): Promise<string> {
 export { CustomerDO } from './durable_objects/customer';
 export { ActivityDO } from './durable_objects/activity';
 export { PartnerDO } from './durable_objects/partner';
+export { PartnerQuoteWorkflow } from './workflows/partner-quotes';

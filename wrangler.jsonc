@@ -93,5 +93,12 @@
 				"max_batch_timeout": 5
 			}
 		]
-	}
+	},
+	"workflows": [
+		{
+			"name": "partner-quote",
+			"binding": "PARTNER_QUOTE_WORKFLOW",
+			"class_name": "PartnerQuoteWorkflow"
+		}
+	]
 }
