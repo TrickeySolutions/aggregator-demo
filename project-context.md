@@ -2,6 +2,34 @@
 
 A web application for generating cyber insurance quotes, built using Cloudflare Workers and following the GOV.UK Design System patterns.
 
+## Architecture Overview
+
+```
+                                    ┌─────────────────┐
+                                    │                 │
+                           ┌───────►│  Quote Queue    │
+                           │        │                 │
+┌──────────┐     ┌────────┴──┐     └────────┬───────┘
+│          │     │           │              │
+│  Client  │────►│  Activity │◄─────────────┤
+│          │     │    DO     │              │
+└──────────┘     │           │     ┌────────┴───────┐
+                 └────────┬──┘     │                │
+                         │         │ Partner Queue  │
+                         └────────►│                │
+                                   └────────────────┘
+```
+
+### Quote Processing Flow
+1. Client submits form
+2. Activity DO updates status to "processing"
+3. Message sent to Quote Queue
+4. Workflow processes quote request
+5. Multiple messages sent to Partner Queue (fan-out)
+6. Partners process quotes independently
+7. Results update Activity DO (fan-in)
+8. Client sees real-time updates
+
 ## Current State
 
 The application now has:

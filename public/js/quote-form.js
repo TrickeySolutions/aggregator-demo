@@ -12,7 +12,17 @@ console.log('Quote form script loaded');
 
 class QuoteForm {
     constructor() {
-        console.log('QuoteForm initialized');
+        // Extract activity ID from URL
+        const path = window.location.pathname;
+        const matches = path.match(/\/customer\/([^\/]+)\/activity\/([^\/]+)\/quote$/);
+        if (!matches) {
+            console.error('Invalid URL format');
+            return;
+        }
+        this.customerId = matches[1];
+        this.activityId = matches[2];
+        
+        console.log('Form initialized for activity:', this.activityId);
         this.ws = null;
         this.currentSection = 'organisation';
         this.sections = ['organisation', 'exposure', 'security', 'review'];
@@ -41,7 +51,8 @@ class QuoteForm {
                     // Send appropriate message via WebSocket
                     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                         this.ws.send(JSON.stringify({
-                            type: action === 'save-draft' ? 'save_draft' : 'submit'
+                            type: action === 'save-draft' ? 'save_draft' : 'submit',
+                            activityId: this.activityId
                         }));
 
                         // Wait for confirmation
@@ -50,7 +61,8 @@ class QuoteForm {
                             const handler = (event) => {
                                 const data = JSON.parse(event.data);
                                 if (data.type === 'state_update' && 
-                                    data.state.status === (action === 'save-draft' ? 'draft' : 'completed')) {
+                                    data.state.status === (action === 'save-draft' ? 'draft' : 'completed') &&
+                                    data.activityId === this.activityId) {
                                     clearTimeout(timeout);
                                     this.ws.removeEventListener('message', handler);
                                     resolve(data);
@@ -100,62 +112,57 @@ class QuoteForm {
     async setupWebSocket() {
         console.log('Setting up WebSocket');
         const path = window.location.pathname;
-        const matches = path.match(/\/customer\/([a-f0-9]+)\/activity\/([a-f0-9]{64})\/quote$/);
-        if (!matches) {
-            console.error('Invalid URL format for WebSocket connection');
-            return;
-        }
+        const wsUrl = `ws://${window.location.host}/api${path}`.replace('/quote', '');
+        
+        console.log('Setting up WebSocket connection to:', wsUrl);
+        this.ws = new WebSocket(wsUrl);
+        
+        // Set up connection timeout
+        const connectionTimeout = setTimeout(() => {
+            if (this.ws.readyState !== WebSocket.OPEN) {
+                this.ws.close();
+                this.showError('Connection timeout', 'Unable to connect to server. Please refresh the page.');
+            }
+        }, 5000);
 
-        try {
-            const [, customerId, activityId] = matches;
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${location.host}/api/customer/${customerId}/activity/${activityId}`;
-            
-            // Create WebSocket without protocol
-            this.ws = new WebSocket(wsUrl);
-            
-            // Set up connection timeout
-            const connectionTimeout = setTimeout(() => {
-                if (this.ws.readyState !== WebSocket.OPEN) {
-                    this.ws.close();
-                    this.showError('Connection timeout', 'Unable to connect to server. Please refresh the page.');
-                }
-            }, 5000);
-
-            // Handle successful connection
-            this.ws.addEventListener('open', () => {
-                console.log('WebSocket connected');
-                clearTimeout(connectionTimeout);
-                // Request initial state
-                this.ws.send(JSON.stringify({ type: 'get_state' }));
-            });
-            
-            this.ws.addEventListener('message', (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'state_update') {
-                        this.formState = data.state;
-                        this.updateFormFromState();
-                        
-                        // Add this: Update review section if we're currently viewing it
-                        if (this.currentSection === 'review') {
-                            this.updateReviewSection();
-                        }
+        // Handle successful connection
+        this.ws.addEventListener('open', () => {
+            console.log('WebSocket connected');
+            clearTimeout(connectionTimeout);
+            // Request initial state
+            this.ws.send(JSON.stringify({ type: 'get_state' }));
+        });
+        
+        this.ws.addEventListener('message', (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'state_update') {
+                    this.formState = data.state;
+                    this.updateFormFromState();
+                    
+                    // Add this: Update review section if we're currently viewing it
+                    if (this.currentSection === 'review') {
+                        this.updateReviewSection();
                     }
-                } catch (err) {
-                    console.error('Failed to parse WebSocket message:', err);
+                } else if (data.type === 'submit_success') {
+                    // Hide loading indicator
+                    this.showLoading(false);
+                    
+                    // Redirect to results page
+                    window.location.href = data.redirectUrl;
+                } else if (data.type === 'error') {
+                    this.showLoading(false);
+                    this.showError(data.message);
                 }
-            });
+            } catch (err) {
+                console.error('Failed to parse WebSocket message:', err);
+            }
+        });
 
-            this.ws.addEventListener('close', () => {
-                console.log('WebSocket disconnected, attempting to reconnect...');
-                setTimeout(() => this.setupWebSocket(), 1000);
-            });
-
-        } catch (error) {
-            console.error('WebSocket setup error:', error);
-            this.showError('Connection Error', 'Failed to establish connection. Please refresh the page.');
-        }
+        this.ws.addEventListener('close', () => {
+            console.log('WebSocket disconnected, attempting to reconnect...');
+            setTimeout(() => this.setupWebSocket(), 1000);
+        });
     }
 
     updateFormFromState() {

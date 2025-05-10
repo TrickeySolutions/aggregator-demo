@@ -69,5 +69,29 @@
 			"tag": "v1",
 			"new_classes": ["CustomerDO", "ActivityDO", "PartnerDO"]
 		}
-	]
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "ACTIVITY_SUBMISSION_QUEUE",
+				"queue": "activity-submission"
+			},
+			{
+				"binding": "PARTNER_QUOTES_QUEUE",
+				"queue": "partner-quotes"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "activity-submission",
+				"max_batch_size": 1,
+				"max_batch_timeout": 1
+			},
+			{
+				"queue": "partner-quotes",
+				"max_batch_size": 10,
+				"max_batch_timeout": 5
+			}
+		]
+	}
 }

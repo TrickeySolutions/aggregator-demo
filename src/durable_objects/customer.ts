@@ -2,18 +2,20 @@ export class CustomerDO {
   private state: DurableObjectState;
   private activities: Set<string>;
   private auth: { userId?: string };
+  private env: any;
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env: any) {
     this.state = state;
     this.activities = new Set();
     this.auth = {};
+    this.env = env;
   }
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     
     // Load existing activities from storage
-    const storedActivities = await this.state.storage.get('activities');
+    const storedActivities = await this.state.storage.get('activities') as string[] | null;
     if (storedActivities) {
       this.activities = new Set(storedActivities);
     }
@@ -28,16 +30,25 @@ export class CustomerDO {
     switch(request.method) {
       case 'POST':
         if (url.pathname === '/api/activities') {
-          // Generate a 32-byte (64 hex char) ID for the activity
-          const bytes = new Uint8Array(32);
-          crypto.getRandomValues(bytes);
-          const id = Array.from(bytes)
-            .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
+          // Generate activity ID consistently
+          const activityId = this.env.ACTIVITIES.newUniqueId().toString();
+          console.log('[CustomerDO] Generated activity ID:', activityId);
           
-          this.activities.add(id);
+          const activity = this.env.ACTIVITIES.get(
+            this.env.ACTIVITIES.idFromString(activityId)
+          );
+          
+          // Initialize activity with customer ID
+          const customerId = this.state.id.toString();
+          await activity.fetch(new Request(`http://dummy/customer/${customerId}/activity/${activityId}/init`, {
+            method: 'POST'
+          }));
+
+          // Store activity ID
+          this.activities.add(activityId);
           await this.state.storage.put('activities', Array.from(this.activities));
-          return new Response(JSON.stringify({ id }), {
+          
+          return new Response(JSON.stringify({ id: activityId }), {
             headers: { 'Content-Type': 'application/json' }
           });
         }
