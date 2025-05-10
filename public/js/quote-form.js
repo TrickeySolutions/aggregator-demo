@@ -112,7 +112,10 @@ class QuoteForm {
     async setupWebSocket() {
         console.log('Setting up WebSocket');
         const path = window.location.pathname;
-        const wsUrl = `ws://${window.location.host}/api${path}`.replace('/quote', '');
+        
+        // Use wss:// for HTTPS, ws:// for HTTP
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/api${path}`.replace('/quote', '');
         
         console.log('Setting up WebSocket connection to:', wsUrl);
         this.ws = new WebSocket(wsUrl);
