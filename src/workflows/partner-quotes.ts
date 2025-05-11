@@ -22,9 +22,9 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
   async run(event: WorkflowEvent<PartnerQuoteParams>, step: WorkflowStep): Promise<PartnerQuoteResult> {
     const { activityId, partnerId, quoteData } = event.payload;
     
-    console.log('[Workflow] Partner Quote Processing Started');
-    console.log('[Workflow] Activity ID:', activityId);
-    console.log('[Workflow] Partner ID:', partnerId);
+    console.log('[PQ Workflow] Partner Quote Processing Started');
+    console.log('[PQ Workflow] Activity ID:', activityId);
+    console.log('[PQ Workflow] Partner ID:', partnerId);
     
     // Step 1: Validate the quote data
     const validationResult = await step.do(
@@ -37,14 +37,14 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
         },
       },
       async (): Promise<boolean> => {
-        console.log('[Workflow] Validating quote data');
+        console.log('[PQ Workflow] Validating quote data');
         // Simple validation - in a real app, you'd have more complex validation
         return !!quoteData && typeof quoteData === 'object';
       }
     );
     
     if (!validationResult) {
-      console.error('[Workflow] Invalid quote data');
+      console.error('[PQ Workflow] Invalid quote data');
       return {
         success: false,
         activityId,
@@ -65,7 +65,7 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
         },
       },
       async (): Promise<boolean> => {
-        console.log('[Workflow] Processing with Partner DO');
+        console.log('[PQ Workflow] Processing with Partner DO');
         
         try {
           const partnerId = this.env.PARTNERS.idFromName(event.payload.partnerId);
@@ -80,14 +80,15 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
               quoteData: event.payload.quoteData
             })
           }));
-          
+          const partnertext = await response.text();
+          console.log('[PQ Workflow] Partner response:', partnertext);
           if (!response.ok) {
-            throw new Error(`Partner processing failed: ${await response.text()}`);
+            throw new Error(`Partner processing failed: ${partnertext}`);
           }
           
           return true;
         } catch (error) {
-          console.error('[Workflow] Partner processing error:', error);
+          console.error('[PQ Workflow] Partner processing error:', error);
           return false;
         }
       }
@@ -114,7 +115,7 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
         },
       },
       async (): Promise<boolean> => {
-        console.log('[Workflow] Updating Activity DO');
+        console.log('[PQ Workflow] Updating Activity DO');
         
         try {
           const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
@@ -142,13 +143,13 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
           
           return true;
         } catch (error) {
-          console.error('[Workflow] Activity update error:', error);
+          console.error('[PQ Workflow] Activity update error:', error);
           return false;
         }
       }
     );
     
-    console.log('[Workflow] Partner Quote Processing Completed');
+    console.log('[PQ Workflow] Partner Quote Processing Completed');
     
     return {
       success: activityResult,
