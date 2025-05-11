@@ -34,6 +34,7 @@ export interface Env {
 	ACTIVITY_SUBMISSION_QUEUE: Queue;
 	PARTNER_QUOTES_QUEUE: Queue;
 	PARTNER_QUOTE_WORKFLOW: WorkflowNamespace<PartnerQuoteParams>;
+	ACTIVITY_SUBMISSION_WORKFLOW: WorkflowNamespace<ActivitySubmissionParams>;
 }
 
 export default {
@@ -128,11 +129,14 @@ export default {
 				
 				// Determine queue type from message content
 				if ('formData' in body && !('quoteData' in body)) {
-					console.log('Queue message received : activity submission');
-					// Fire and forget - don't await the result
+					console.log('Creating activity submission workflow');
 					ctx.waitUntil(
-						handleActivitySubmission(body as ActivitySubmissionMessage, env)
-							.catch(error => console.error('Activity submission error:', error))
+						env.ACTIVITY_SUBMISSION_WORKFLOW.create({
+							params: {
+								activityId: body.activityId,
+								formData: body.formData
+							}
+						}).catch(error => console.error('Failed to create workflow:', error))
 					);
 				} else if ('quoteData' in body && 'partnerId' in body) {
 					// Instead of calling the function, create a workflow instance
@@ -170,3 +174,4 @@ export { CustomerDO } from './durable_objects/customer';
 export { ActivityDO } from './durable_objects/activity';
 export { PartnerDO } from './durable_objects/partner';
 export { PartnerQuoteWorkflow } from './workflows/partner-quotes';
+export { ActivitySubmissionWorkflow } from './workflows/activity-submission';

@@ -99,6 +99,11 @@
 			"name": "partner-quote",
 			"binding": "PARTNER_QUOTE_WORKFLOW",
 			"class_name": "PartnerQuoteWorkflow"
+		},
+		{
+			"name": "activity-submission",
+			"binding": "ACTIVITY_SUBMISSION_WORKFLOW",
+			"class_name": "ActivitySubmissionWorkflow"
 		}
 	]
 }
