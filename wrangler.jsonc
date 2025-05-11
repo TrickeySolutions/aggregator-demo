@@ -85,12 +85,18 @@
 			{
 				"queue": "activity-submission",
 				"max_batch_size": 1,
-				"max_batch_timeout": 1
+				"max_batch_timeout": 1,
+				"max_retries": 3,
+				"dead_letter_queue": "activity-submission-dlq",
+				"retry_delay": 0
 			},
 			{
 				"queue": "partner-quotes",
-				"max_batch_size": 10,
-				"max_batch_timeout": 1
+				"max_batch_size": 1,
+				"max_batch_timeout": 1,
+				"max_retries": 3,
+				"dead_letter_queue": "partner-quotes-dlq",
+				"retry_delay": 0
 			}
 		]
 	},
