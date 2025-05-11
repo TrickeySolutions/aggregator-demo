@@ -25,7 +25,7 @@ export class PartnerDO {
       const price = Math.floor(Math.random() * (10000 - 100 + 1)) + 100;
 
       // Simulate some processing time (1-3 seconds)
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 10000 + 1000));
 
       const quoteResponse = {
         partnerId,

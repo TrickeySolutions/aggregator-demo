@@ -19,7 +19,6 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
     async run(event: WorkflowEvent<ActivitySubmissionParams>, step: WorkflowStep): Promise<ActivitySubmissionResult> {
         const { activityId, formData } = event.payload;
         console.log('[AS Workflow] Activity Submission Started');
-        console.log('[AS Workflow] Processing activity:', activityId);
 
         // Step 1: Validate Submission Data
         const validationResult = await step.do(
@@ -33,84 +32,47 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
             }
         );
 
-        if (!validationResult) {
-            return {
-                success: false,
-                activityId,
-                timestamp: Date.now(),
-                message: 'Invalid submission data'
-            };
-        }
-
-        // Step 2: Get Partners
-        const partners = await step.do(
-            'get-partners',
-            {
-                retries: { limit: 2, delay: '2 seconds', backoff: 'exponential' }
-            },
-            async () => {
-                console.log('[AS Workflow] Step 2: Getting partners...');
-                return ['partner1', 'partner2', 'partner3', 'partner4', 'partner5'];
-            }
-        );
-
-        // Step 3: Queue Partners
+        // Update status to getting_quotes immediately after validation
         await step.do(
-            'queue-partners',
-            {
-                retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }
-            },
-            async () => {
-                console.log('[AS Workflow] Step 4: Queueing partner requests...');
-                for (const partnerId of partners) {
-                    const partnerMessage = {
-                        activityId,
-                        partnerId,
-                        quoteData: {
-                            partnerSpecificData: `Data for ${partnerId}`,
-                            formData
-                        }
-                    };
-                    
-                    console.log(`[AS Workflow] Queueing request for partner: ${partnerId}`);
-                    await this.env.PARTNER_QUOTES_QUEUE.send(partnerMessage);
-                }
-                return true;
-            }
-        );
-
-        // Step 4: Update Status
-        const statusUpdate = await step.do(
             'update-status',
             {
-                retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' }
+                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
             },
             async () => {
-                console.log('[AS Workflow] Step 5: Updating activity status to getting_quotes...');
                 const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
-                const activity = this.env.ACTIVITIES.get(activityId);
+                const activityDO = this.env.ACTIVITIES.get(activityId);
                 
-                const response = await activity.fetch(new Request('http://dummy', {
+                await activityDO.fetch(new Request('http://dummy', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         status: 'getting_quotes'
                     })
                 }));
-
-                return response.ok;
+                return true;
             }
         );
 
-        console.log('[AS Workflow] Activity submission workflow completed');
+        // Step 2: Get Partners and queue them
+        const partners = ['partner1', 'partner2', 'partner3', 'partner4', 'partner5'];
         
+        // Queue partner requests in parallel
+        await Promise.all(partners.map(partnerId => 
+            this.env.PARTNER_QUOTES_QUEUE.send({
+                activityId: event.payload.activityId,
+                partnerId,
+                quoteData: {
+                    partnerSpecificData: `Data for ${partnerId}`,
+                    formData: event.payload.formData
+                }
+            })
+        ));
+
         return {
-            success: statusUpdate,
+            success: true,
             activityId,
             timestamp: Date.now(),
-            message: statusUpdate ? 'Activity submission processed successfully' : 'Failed to update activity status'
+            message: 'Activity submission processed successfully'
         };
     }
 }
