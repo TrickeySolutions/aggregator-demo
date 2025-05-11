@@ -26,6 +26,31 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
     console.log('[PQ Workflow] Activity ID:', activityId);
     console.log('[PQ Workflow] Partner ID:', partnerId);
     
+    // Initialize the quote in activity state
+    await step.do(
+      'initialize-quote',
+      {
+        retries: { limit: 2, delay: '2 seconds', backoff: 'exponential' }
+      },
+      async () => {
+        const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
+        const activityDO = this.env.ACTIVITIES.get(activityId);
+        
+        await activityDO.fetch(new Request('http://localhost/api/update-quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            partnerId: event.payload.partnerId,
+            update: {
+              status: 'processing',
+              updatedAt: new Date().toISOString()
+            }
+          })
+        }));
+        return true;
+      }
+    );
+    
     // Step 1: Validate the quote data
     const validationResult = await step.do(
       'validate-quote-data',
@@ -132,7 +157,8 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
               update: {
                 status: 'complete',
                 price: quoteData.price || Math.floor(Math.random() * 10000) + 1000,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                partnerName: quoteData.partnerName
               }
             })
           }));

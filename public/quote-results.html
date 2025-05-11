@@ -136,6 +136,44 @@
         .govuk-panel--error {
             background-color: #d4351c;
         }
+
+        .completed-quotes {
+            margin-bottom: 30px;
+        }
+
+        .completed-quote-card {
+            border: 2px solid #1d70b8;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            background: #ffffff;
+        }
+
+        .completed-quote-card__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .completed-quote-card__price {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00703c;
+        }
+
+        .completed-quote-card__details {
+            margin-bottom: 20px;
+        }
+
+        .completed-quote-card__action {
+            text-align: right;
+        }
+
+        .quote-partner--processing {
+            background-color: #f3f2f1;
+            border: 1px solid #b1b4b6;
+        }
     </style>
 </head>
 <body>
@@ -163,8 +201,8 @@
         <main class="govuk-main-wrapper" id="main-content" role="main">
             <h1 class="govuk-heading-l">Your Quote Results</h1>
             
-            <!-- Add status section -->
-            <div class="govuk-panel govuk-panel--confirmation activity-status">
+            <!-- Add id to the panel -->
+            <div id="status-panel" class="govuk-panel govuk-panel--confirmation activity-status">
                 <h2 class="govuk-panel__title">
                     <span id="org-name">Loading...</span>
                 </h2>
@@ -174,9 +212,14 @@
             </div>
 
             <div class="quote-results">
-                <h2 class="govuk-heading-m">Partner Quotes</h2>
-                <div id="partner-quotes" class="quote-results__grid">
-                    <!-- Partner quotes will be inserted here -->
+                <h2 class="govuk-heading-m">Completed Quotes</h2>
+                <div id="completed-quotes" class="completed-quotes">
+                    <!-- Completed quotes will be inserted here -->
+                </div>
+
+                <h2 class="govuk-heading-m">Processing Quotes</h2>
+                <div id="processing-quotes" class="quote-results__grid">
+                    <!-- Processing quotes will be inserted here -->
                 </div>
             </div>
         </main>
@@ -212,24 +255,30 @@
             }
 
             updateStatus(state) {
-                // Update organization name
-                const orgName = state.formData?.organisation?.name || 'Unknown Organization';
-                document.getElementById('org-name').textContent = orgName;
+                // Update organization name if the element exists
+                const orgNameEl = document.getElementById('org-name');
+                if (orgNameEl) {
+                    orgNameEl.textContent = state.formData?.organisation?.name || 'Unknown Organization';
+                }
 
-                // Update status with friendly message
-                const statusMessages = {
-                    'processing': 'Processing your submission...',
-                    'getting_quotes': 'Getting quotes from partners...',
-                    'completed': 'All quotes received',
-                    'error': 'An error occurred'
-                };
+                // Update status with friendly message if the element exists
+                const statusEl = document.getElementById('activity-status');
+                if (statusEl) {
+                    const statusMessages = {
+                        'processing': 'Processing your submission...',
+                        'getting_quotes': 'Getting quotes from partners...',
+                        'completed': 'All quotes received',
+                        'error': 'An error occurred'
+                    };
+                    
+                    statusEl.textContent = statusMessages[state.status] || state.status;
+                }
                 
-                document.getElementById('activity-status').textContent = 
-                    statusMessages[state.status] || state.status;
-                
-                // Update panel styling based on status
-                const panel = document.querySelector('.activity-status');
-                panel.className = `govuk-panel ${this.getStatusClass(state.status)}`;
+                // Update panel styling based on status if the element exists
+                const panel = document.getElementById('status-panel');
+                if (panel) {
+                    panel.className = `govuk-panel activity-status ${this.getStatusClass(state.status)}`;
+                }
             }
 
             getStatusClass(status) {
@@ -244,21 +293,68 @@
             }
 
             updateQuotes(quotes) {
-                const container = document.getElementById('partner-quotes');
-                container.innerHTML = '';
+                if (!quotes) return; // Guard against undefined quotes
+                
+                const completedContainer = document.getElementById('completed-quotes');
+                const processingContainer = document.getElementById('processing-quotes');
+                
+                if (!completedContainer || !processingContainer) return;
+                
+                // Clear both containers
+                completedContainer.innerHTML = '';
+                processingContainer.innerHTML = '';
+
+                // Split quotes into completed and processing
+                const completedQuotes = [];
+                const processingQuotes = [];
 
                 Object.entries(quotes).forEach(([partnerId, quote]) => {
-                    container.innerHTML += `
-                        <div class="quote-partner ${quote.status === 'processing' ? 'quote-partner--processing' : ''}">
+                    const quoteWithId = { 
+                        partnerId, 
+                        ...quote,
+                        partnerName: quote.partnerName || `Partner ${partnerId}`
+                    };
+                    
+                    if (quote.status === 'complete') {
+                        completedQuotes.push(quoteWithId);
+                    } else {
+                        processingQuotes.push(quoteWithId);
+                    }
+                });
+
+                // Sort completed quotes by price
+                completedQuotes.sort((a, b) => (a.price || 0) - (b.price || 0));
+
+                // Render completed quotes
+                completedQuotes.forEach(quote => {
+                    completedContainer.innerHTML += `
+                        <div class="completed-quote-card">
+                            <div class="completed-quote-card__header">
+                                <h3 class="govuk-heading-m">${quote.partnerName}</h3>
+                                <div class="completed-quote-card__price">
+                                    £${quote.price?.toLocaleString()} /month
+                                </div>
+                            </div>
+                            <div class="completed-quote-card__details">
+                                <p class="govuk-body">Quote received on ${new Date(quote.updatedAt).toLocaleDateString()}</p>
+                            </div>
+                            <div class="completed-quote-card__action">
+                                <button class="govuk-button" data-module="govuk-button">
+                                    Accept Quote
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                // Render processing quotes
+                processingQuotes.forEach(quote => {
+                    processingContainer.innerHTML += `
+                        <div class="quote-partner quote-partner--processing">
                             <h3 class="govuk-heading-s">${quote.partnerName}</h3>
                             <div class="quote-partner__status">
                                 ${this.getStatusHTML(quote.status)}
                             </div>
-                            ${quote.price ? `
-                                <div class="quote-partner__price">
-                                    £${quote.price.toLocaleString()}
-                                </div>
-                            ` : ''}
                         </div>
                     `;
                 });
