@@ -56,6 +56,27 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
         // Step 2: Get Partners and queue them
         const partners = ['partner1', 'partner2', 'partner3', 'partner4', 'partner5'];
         
+        // Set expected partner count before queueing
+        await step.do(
+            'set-partner-count',
+            {
+                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
+            },
+            async () => {
+                const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
+                const activityDO = this.env.ACTIVITIES.get(activityId);
+                
+                await activityDO.fetch(new Request('http://dummy/api/update-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        expectedPartnerCount: partners.length
+                    })
+                }));
+                return true;
+            }
+        );
+
         // Queue partner requests in parallel
         await Promise.all(partners.map(partnerId => 
             this.env.PARTNER_QUOTES_QUEUE.send({
