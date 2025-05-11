@@ -72,13 +72,12 @@ export class ActivityDO {
 
   // Fix spread operator error by typing the update parameter
   private async updateState(update: Partial<ActivityState>) {
-    // Create new state object with type safety
-    const newState: ActivityState = {
-      ...this.activityState,
-      ...update,
-      updatedAt: Date.now()
+    // Create new state object
+    this.activityState = {
+        ...this.activityState,
+        ...update,
+        updatedAt: Date.now()
     };
-    this.activityState = newState;
     await this.state.storage.put('state', this.activityState);
   }
 
@@ -118,9 +117,6 @@ export class ActivityDO {
         await this.state.storage.put('state', this.activityState);
         console.log('[ActivityDO] Saved initial state with customer ID:', customerId);
         return new Response('OK');
-    } else {
-        console.error('[ActivityDO] Activity not found:', this.state.id.toString());
-        return new Response('Activity not found', { status: 404 });
     }
 
     // Handle WebSocket upgrade
@@ -223,21 +219,19 @@ export class ActivityDO {
 
     if (request.method === 'POST') {
         if (request.headers.get('Content-Type') === 'application/json') {
-            const update = await request.json() as Partial<ActivityState>;
-            await this.updateState(update);
+            const body = await request.json();
+            
+            // Handle quote updates
+            if (url.pathname === '/api/update-quote' && body.partnerId) {
+                console.log('[ActivityDO] Updating quote with body:', body);
+                await this.updateQuote(body.partnerId, body);
+                return new Response(JSON.stringify({ success: true }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
 
-            // Broadcast state update to all connected clients
-            const message = JSON.stringify({
-                type: 'state_update',
-                state: this.activityState
-            });
-
-            this.sessions.forEach(ws => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(message);
-                }
-            });
-
+            // Handle other state updates
+            await this.updateState(body);
             return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -293,7 +287,6 @@ export class ActivityDO {
   async handleSubmit(data: { activityId: string }) {
     console.log('[ActivityDO] Starting submit with state:', JSON.stringify(this.activityState, null, 2));
     
-    // Verify activity ID matches
     if (data.activityId !== this.state.id.toString()) {
         console.error('[ActivityDO] Activity ID mismatch:', data.activityId, 'vs', this.state.id.toString());
         throw new Error('Activity ID mismatch');
@@ -307,19 +300,8 @@ export class ActivityDO {
     // Update status
     this.activityState.status = 'processing';
     
-    // Initialize quotes object
-    this.activityState.quotes = {
-        'partner1': {
-            partnerName: 'Insurance Co A',
-            status: 'processing',
-            updatedAt: new Date().toISOString()
-        },
-        'partner2': {
-            partnerName: 'Insurance Co B',
-            status: 'processing',
-            updatedAt: new Date().toISOString()
-        }
-    };
+    // Initialize empty quotes object
+    this.activityState.quotes = {};
 
     // Save state before sending to queue
     await this.updateState(this.activityState);
@@ -355,13 +337,24 @@ export class ActivityDO {
     return { success: true };
   }
 
-  async updateQuote(partnerId: string, update: Partial<ActivityState['quotes'][string]>) {
-    if (!this.activityState.quotes[partnerId]) return { error: 'Partner not found' };
+  async updateQuote(partnerId: string, update: any) {
+    console.log('[ActivityDO] Updating quote for partner:', partnerId, 'with update:', update);
+    
+    // Initialize quotes object if it doesn't exist
+    if (!this.activityState.quotes) {
+        this.activityState.quotes = {};
+    }
 
+    // Extract the actual update data from the request
+    const quoteUpdate = update.update || update;
+    
+    // Initialize or update the quote for this partner
     this.activityState.quotes[partnerId] = {
-        ...this.activityState.quotes[partnerId],
-        ...update,
-        updatedAt: new Date().toISOString()
+        ...this.activityState.quotes[partnerId],  // Preserve existing data
+        partnerName: quoteUpdate.partnerName || this.activityState.quotes[partnerId]?.partnerName || `Partner ${partnerId}`,
+        status: quoteUpdate.status || 'processing',
+        updatedAt: quoteUpdate.updatedAt || new Date().toISOString(),
+        ...(quoteUpdate.price !== undefined && { price: quoteUpdate.price })
     };
 
     // Check if all quotes are complete
@@ -372,13 +365,21 @@ export class ActivityDO {
         this.activityState.status = 'completed';
     }
 
+    // Remove any temporary update data from the state
+    if ('update' in this.activityState) {
+        delete this.activityState.update;
+    }
+    if ('partnerId' in this.activityState) {
+        delete this.activityState.partnerId;
+    }
+
     // Save state changes
     await this.updateState(this.activityState);
 
     // Notify clients
     const message = JSON.stringify({
-        type: 'state_update', // Changed from quote_update to state_update
-        state: this.activityState // Send full state instead of just quotes
+        type: 'state_update',
+        state: this.activityState
     });
 
     this.sessions.forEach(ws => {
