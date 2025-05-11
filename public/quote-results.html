@@ -279,6 +279,16 @@
                 if (panel) {
                     panel.className = `govuk-panel activity-status ${this.getStatusClass(state.status)}`;
                 }
+
+                // Add quote progress if we have an expected count
+                if (state.expectedPartnerCount) {
+                    const completedCount = Object.values(state.quotes)
+                        .filter(q => q.status === 'complete').length;
+                    
+                    if (statusEl) {
+                        statusEl.textContent = `Getting quotes from partners (${completedCount}/${state.expectedPartnerCount} complete)`;
+                    }
+                }
             }
 
             getStatusClass(status) {

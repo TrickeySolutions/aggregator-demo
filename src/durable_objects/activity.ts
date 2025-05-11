@@ -30,6 +30,7 @@ interface ActivityState {
     };
   };
   customerId: string;
+  expectedPartnerCount?: number;
 }
 
 export class ActivityDO {
@@ -357,20 +358,16 @@ export class ActivityDO {
         ...(quoteUpdate.price !== undefined && { price: quoteUpdate.price })
     };
 
-    // Check if all quotes are complete
-    const allComplete = Object.values(this.activityState.quotes)
-        .every(q => q.status === 'complete' || q.status === 'error');
-
-    if (allComplete) {
+    // Check if all expected quotes are complete
+    const completedQuotes = Object.values(this.activityState.quotes)
+        .filter(q => q.status === 'complete').length;
+    
+    const expectedCount = this.activityState.expectedPartnerCount || 0;
+    
+    console.log(`[ActivityDO] Completed quotes: ${completedQuotes}/${expectedCount}`);
+    
+    if (completedQuotes === expectedCount) {
         this.activityState.status = 'completed';
-    }
-
-    // Remove any temporary update data from the state
-    if ('update' in this.activityState) {
-        delete this.activityState.update;
-    }
-    if ('partnerId' in this.activityState) {
-        delete this.activityState.partnerId;
     }
 
     // Save state changes
