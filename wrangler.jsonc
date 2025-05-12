@@ -48,6 +48,10 @@
 	 */
 	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 
+	"ai": {
+		"binding": "AI"
+	},
+
 	"durable_objects": {
 		"bindings": [
 			{

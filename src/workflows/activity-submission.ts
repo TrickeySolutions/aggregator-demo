@@ -54,7 +54,11 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
         );
 
         // Step 2: Get Partners and queue them
-        const partners = ['partner1', 'partner2', 'partner3', 'partner4', 'partner5'];
+        //pick a random number of aprtners between 5 and 100 to send quotes to
+        const partnerCount = Math.floor(Math.random() * (100 - 5 + 1)) + 5; // Random number between 5 and 100
+        const partners = Array.from({ length: partnerCount }, () => 
+            crypto.randomUUID() // Generates a GUID/UUID
+        );
         
         // Set expected partner count before queueing
         await step.do(
