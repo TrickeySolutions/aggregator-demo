@@ -29,12 +29,15 @@ export interface Env {
 	CUSTOMERS: DurableObjectNamespace;
 	ACTIVITIES: DurableObjectNamespace;
 	PARTNERS: DurableObjectNamespace;
-	ASSETS: { fetch: (request: Request) => Promise<Response> };
+	ASSETS: Fetcher;
 	ACTIVITY: DurableObjectNamespace;
 	ACTIVITY_SUBMISSION_QUEUE: Queue;
 	PARTNER_QUOTES_QUEUE: Queue;
-	PARTNER_QUOTE_WORKFLOW: WorkflowNamespace<PartnerQuoteParams>;
-	ACTIVITY_SUBMISSION_WORKFLOW: WorkflowNamespace<ActivitySubmissionParams>;
+	PARTNER_QUOTE_WORKFLOW: any;
+	ACTIVITY_SUBMISSION_WORKFLOW: any;
+	AI: {
+		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
+	};
 }
 
 export default {

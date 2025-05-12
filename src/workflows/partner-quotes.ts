@@ -83,13 +83,9 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
     const partnerResult = await step.do(
       'process-with-partner',
       {
-        retries: {
-          limit: 3,
-          delay: '5 seconds',
-          backoff: 'exponential',
-        },
+        retries: { limit: 3, delay: '5 seconds', backoff: 'exponential' },
       },
-      async (): Promise<boolean> => {
+      async (): Promise<{ success: boolean; response?: any }> => {
         console.log('[PQ Workflow] Processing with Partner DO');
         
         try {
@@ -105,21 +101,23 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
               quoteData: event.payload.quoteData
             })
           }));
-          const partnertext = await response.text();
-          console.log('[PQ Workflow] Partner response:', partnertext);
+          
           if (!response.ok) {
-            throw new Error(`Partner processing failed: ${partnertext}`);
+            throw new Error(`Partner processing failed: ${await response.text()}`);
           }
           
-          return true;
+          const partnerResponse = await response.json();
+          console.log('[PQ Workflow] Partner response:', partnerResponse);
+          
+          return { success: true, response: partnerResponse };
         } catch (error) {
           console.error('[PQ Workflow] Partner processing error:', error);
-          return false;
+          return { success: false };
         }
       }
     );
     
-    if (!partnerResult) {
+    if (!partnerResult.success) {
       return {
         success: false,
         activityId,
@@ -133,20 +131,14 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
     const activityResult = await step.do(
       'update-activity',
       {
-        retries: {
-          limit: 3,
-          delay: '2 seconds',
-          backoff: 'exponential',
-        },
+        retries: { limit: 3, delay: '2 seconds', backoff: 'exponential' },
       },
       async (): Promise<boolean> => {
-        console.log('[PQ Workflow] Updating Activity DO');
-        
         try {
           const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
           const activityDO = this.env.ACTIVITIES.get(activityId);
           
-          // Call the updateQuote method on the ActivityDO
+          // Use the partner's response to update the activity
           const response = await activityDO.fetch(new Request('http://localhost/api/update-quote', {
             method: 'POST',
             headers: {
@@ -154,12 +146,7 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
             },
             body: JSON.stringify({
               partnerId: event.payload.partnerId,
-              update: {
-                status: 'complete',
-                price: quoteData.price || Math.floor(Math.random() * 10000) + 1000,
-                updatedAt: new Date().toISOString(),
-                partnerName: quoteData.partnerName
-              }
+              update: partnerResult.response  // Use the actual partner response
             })
           }));
           
