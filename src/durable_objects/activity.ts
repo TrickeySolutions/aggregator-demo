@@ -306,18 +306,28 @@ export class ActivityDO {
 
     // Save state before sending to queue
     await this.updateState(this.activityState);
-    console.log('[ActivityDO] State updated, sending to queue');
+    console.log('[ActivityDO] State updated, attempting to create workflow directly');
 
     const activityId = this.state.id.toString();
     console.log('[ActivityDO] Activity ID:', activityId);
 
-    const queueMessage = {
+    const workflowParams = {
         activityId,
         formData: this.activityState.formData
     };
 
-    await this.env.ACTIVITY_SUBMISSION_QUEUE.send(queueMessage);
-    console.log('[ActivityDO] Message sent to queue');
+    try {
+        // Try to create workflow directly first
+        await this.env.ACTIVITY_SUBMISSION_WORKFLOW.create({
+            params: workflowParams
+        });
+        console.log('[ActivityDO] Workflow created directly');
+    } catch (error) {
+        // If workflow creation fails (likely due to rate limiting), fall back to queue
+        console.log('[ActivityDO] Direct workflow creation failed, falling back to queue:', error);
+        await this.env.ACTIVITY_SUBMISSION_QUEUE.send(workflowParams);
+        console.log('[ActivityDO] Message sent to queue as fallback');
+    }
 
     // Send redirect URL with same activity ID
     const redirectUrl = `/customer/${this.activityState.customerId}/activity/${activityId}/results`;
