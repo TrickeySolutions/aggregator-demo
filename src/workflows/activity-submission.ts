@@ -55,7 +55,7 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
 
         // Step 2: Get Partners and queue them
         //pick a random number of aprtners between 5 and 100 to send quotes to
-        const partnerCount = Math.floor(Math.random() * (100 - 5 + 1)) + 5; // Random number between 5 and 100
+        const partnerCount = Math.floor(Math.random() * (45 - 5 + 1)) + 5; // Random number between 5 and 100
         const partners = Array.from({ length: partnerCount }, () => 
             crypto.randomUUID() // Generates a GUID/UUID
         );
@@ -81,17 +81,44 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
             }
         );
 
-        // Queue partner requests in parallel
-        await Promise.all(partners.map(partnerId => 
-            this.env.PARTNER_QUOTES_QUEUE.send({
-                activityId: event.payload.activityId,
-                partnerId,
-                quoteData: {
-                    partnerSpecificData: `Data for ${partnerId}`,
-                    formData: event.payload.formData
-                }
-            })
-        ));
+        // Process partners with direct workflow creation and queue fallback
+        await step.do(
+            'process-partners',
+            {
+                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
+            },
+            async () => {
+                // Create all workflows in parallel
+                const promises = partners.map(partnerId => {
+                    const partnerParams = {
+                        activityId: event.payload.activityId,
+                        partnerId,
+                        quoteData: {
+                            partnerSpecificData: `Data for ${partnerId}`,
+                            formData: event.payload.formData
+                        }
+                    };
+                    
+                    return this.ctx.waitUntil((async () => {
+                        try {
+                            // Try direct workflow creation first
+                            await this.env.PARTNER_QUOTE_WORKFLOW.create({
+                                params: partnerParams
+                            });
+                            console.log(`[AS Workflow] Created workflow for partner ${partnerId}`);
+                        } catch (error) {
+                            // Fall back to queue if direct creation fails
+                            console.log(`[AS Workflow] Falling back to queue for ${partnerId}:`, error);
+                            await this.env.PARTNER_QUOTES_QUEUE.send(partnerParams);
+                        }
+                    })());
+                });
+
+                // Wait for all partners to be processed
+                await Promise.all(promises);
+                return true;
+            }
+        );
 
         return {
             success: true,

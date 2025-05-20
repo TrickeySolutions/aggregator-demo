@@ -36,7 +36,7 @@ export interface Env {
 	PARTNER_QUOTE_WORKFLOW: any;
 	ACTIVITY_SUBMISSION_WORKFLOW: any;
 	AI: {
-		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
+		run(model: string, options: { messages: { role: string, content: string }[] }): Promise<{ response: string }>;
 	};
 }
 
