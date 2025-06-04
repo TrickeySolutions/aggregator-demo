@@ -1,8 +1,25 @@
 # Cyber Insurance Quote Platform
 
-A demonstration web application for generating cyber insurance quotes, built using Cloudflare Workers and Durable Objects. The application follows the GOV.UK Design System for a consistent and accessible user experience.  It can be used to demonstrate some architecture patterns and features of Cloudflare Workers and Durable Objects.
+A demonstration web application for a cyber insurance comparison service.
+ 
+It can be used to demonstrate a wide variety Cloudflare developer platform features 
+At the core of this application is a fan-in fan-out architecture that scatters the risk profiles to many potential insruance prviders and then gatehrs the results for aggregation.
+The applciation also leverages AI inference to genreate 
+  
 
-🚀 **[View Live Demo](https://compare.trickey.solutions)** - See the application in action with a fully deployed example.
+🚀 **<a href="https://compare.trickey.solutions" target="_blank">View Live Demo</a>** - See the application in action with a fully deployed example.
+
+## User Flow
+
+1. User clicks "Get a Quote" on the home page
+2. System creates new customer and activity
+3. User completes multi-step quote form
+4. On submission:
+   - Form data is saved - user is redirected to a results page
+   - Users activity profile is asynch sent to AI Generated Partners
+   - Partners process activities requests asynchronously and offer quotes
+   - Quote Results are aggregated in real-time as as they arrive
+5. User can compare offers to choose which quote to accept
 
 ## Features
 
@@ -33,10 +50,18 @@ A demonstration web application for generating cyber insurance quotes, built usi
 
 ## Prerequisites
 
+- Cloudflare Workers account (https://dash.cloudflare.com/sign-up/workers)
+
+<details>
+<summary>Optional: Local Development Prereqisites}</summary>
+
+If you want to develop locally or manage resources via command line, you'll also need:
+
 - Node.js (v16 or higher)
 - npm or yarn
-- Cloudflare Workers account (https://dash.cloudflare.com/sign-up/workers)
 - Wrangler CLI (https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+
+</details>
 
 ## Quick Start
 
@@ -46,10 +71,37 @@ The Deploy to Cloudflare button will automatically:
 1. Fork this repository to your GitHub account
 2. Connect it to Cloudflare Builds
 3. Start the initial deployment
+4. Provision primatives as resources (Queues, Object Storage, AI Inferance, Durable Objects etc..)
 
-After clicking the button, you'll need to:
+> **Note**: When using the Deploy button, all required Cloudflare resources are automatically provisioned for you. You only need to configure environment variables after deployment.
 
-### 1. Set up Required Cloudflare Services
+### Configure Environment Variables
+
+Create a `.dev.vars` file in your project root with the following variables:
+```
+TURNSTILE_SITE_KEY=your_site_key_here
+TURNSTILE_SECRET_KEY=your_secret_key_here
+PARTNER_LOGOS_URL=your_r2_bucket_url
+```
+
+For production, you can set the variables either through the Dashboard UI or using wrangler commands:
+
+```bash
+# Using wrangler to set secrets
+wrangler secret put TURNSTILE_SITE_KEY
+wrangler secret put TURNSTILE_SECRET_KEY
+wrangler secret put PARTNER_LOGOS_URL
+```
+
+Alternatively, via the Cloudflare Dashboard:
+1. Go to Workers & Pages
+2. Select your application
+3. Go to Settings > Environment Variables
+4. Add the same variables as above
+
+## Manual Setup
+
+If you prefer to set up the project manually instead of using the Deploy button, you'll need to create the following resources yourself:
 
 #### Create Cloudflare Queues
 ```bash
@@ -74,21 +126,6 @@ npx wrangler r2 bucket create partner-logos-dev
 1. Go to Cloudflare Dashboard > Security > Turnstile
 2. Create a new site widget
 3. Note down the Site Key and Secret Key
-
-### 2. Configure Environment Variables
-
-Create a `.dev.vars` file in your project root with the following variables:
-```
-TURNSTILE_SITE_KEY=your_site_key_here
-TURNSTILE_SECRET_KEY=your_secret_key_here
-PARTNER_LOGOS_URL=your_r2_bucket_url
-```
-
-For production, add these variables in your Cloudflare Dashboard:
-1. Go to Workers & Pages
-2. Select your application
-3. Go to Settings > Environment Variables
-4. Add the same variables as above
 
 ## Local Development
 
@@ -127,11 +164,11 @@ npm run dev
 2. System creates new customer and activity
 3. User completes multi-step quote form
 4. On submission:
-   - Form data is saved
-   - Partner quote requests are queued
-   - User is redirected to results page
-   - Partners process quote requests asynchronously
-   - Results update in real-time as quotes arrive
+   - Form data is saved - user is redirected to a results page
+   - Users activity profile is asynch sent to AI Generated Partners
+   - Partners process activities requests asynchronously and offer quotes
+   - Quote Results are aggregated in real-time as as they arrive
+5. User can compare offers to choose which quote to accept
 
 ## Technical Implementation
 
