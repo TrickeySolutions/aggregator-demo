@@ -35,6 +35,8 @@ A demonstration web application for generating cyber insurance quotes, built usi
 
 ## Setup
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2FTrickeySolutions%2Faggregator-demo)
+
 1. Install dependencies:
 ```bash
 npm install
@@ -66,14 +68,14 @@ npm run dev
 The project structure:
 ```
 ├── public/              # Static assets
-│   ├── js/             # Client-side JavaScript
-│   └── assets/         # Images and other assets
-├── src/                # Source code
-│   ├── durable_objects/# Durable Object implementations
-│   ├── workflows/      # Queue processing workflows
-│   ├── types/         # TypeScript type definitions
-│   └── index.ts       # Main worker entry point
-└── scripts/           # Build and setup scripts
+│   ├── js/              # Client-side JavaScript
+│   └── assets/          # Images and other assets
+├── src/                 # Source code
+│   ├── durable_objects/ # Durable Object implementations
+│   ├── workflows/       # async workflows
+│   ├── types/           # TypeScript type definitions
+│   └── index.ts         # Main worker entry point
+└── scripts/             # Build and setup scripts
 ```
 
 ## User Flow
