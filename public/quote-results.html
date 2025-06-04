@@ -10,12 +10,13 @@
         .govuk-header {
             background-color: #0b0c0c;
             border-bottom: 10px solid #1d70b8;
+            padding: 15px 0;  /* Added padding */
         }
 
         .govuk-header__container {
             border-bottom: none;
-            padding-top: 10px;
-            padding-bottom: 10px;
+            margin-bottom: 0;
+            padding: 0;  /* Reset padding */
         }
 
         .govuk-header__logo {
@@ -56,51 +57,70 @@
             text-decoration-thickness: 3px;
         }
 
+        /* Add responsive adjustments */
+        @media (max-width: 768px) {
+            .trickey-logo-text {
+                font-size: 32px;
+            }
+            .govuk-header__content {
+                padding-left: 0;
+                border-left: none;  /* Remove border on mobile */
+                margin-top: 10px;  /* Add spacing between logo and service name */
+            }
+            .govuk-header__link--service-name {
+                font-size: 24px !important;  /* Smaller font on mobile */
+            }
+        }
+
+        /* Fix container width on small screens */
+        @media (max-width: 40.0625em) {
+            .govuk-width-container {
+                margin-right: 15px;
+                margin-left: 15px;
+                max-width: 100%;
+            }
+        }
+
         .quote-results {
-            margin-top: 30px;
+            margin-top: 40px;
+            padding: 0 0 40px;
         }
 
         .quote-results__grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            gap: 25px;
         }
 
         .quote-partner {
             border: 1px solid #b1b4b6;
-            padding: 20px;
-            margin-bottom: 0; /* Remove margin as we're using grid gap */
-            border-radius: 4px;
+            padding: 25px;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .quote-partner--processing {
-            background-color: #f3f2f1;
+            background: #f3f2f1;
+            border: 2px dashed #b1b4b6;
+            position: relative;
+            overflow: hidden;
         }
 
-        .quote-partner__status {
-            color: #505a5f;
-            margin-bottom: 10px;
+        .quote-partner--processing::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #1d70b8, transparent);
+            animation: loading 2s infinite;
         }
 
-        .quote-partner__price {
-            font-size: 36px;
-            font-weight: bold;
-            color: #00703c;
-        }
-
-        .quote-partner__loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #1d70b8;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
         @font-face {
@@ -138,45 +158,204 @@
         }
 
         .completed-quotes {
-            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(700px, 100%), 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
         }
 
         .completed-quote-card {
-            border: 2px solid #1d70b8;
-            padding: 30px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+            border: 1px solid #b1b4b6;
+            padding: 25px;
+            border-radius: 12px;
             background: #ffffff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .completed-quote-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .completed-quote-card__brand {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .partner-logo {
+            width: 180px;
+            height: 180px;
+            object-fit: contain;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .completed-quote-card__content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 180px;
         }
 
         .completed-quote-card__header {
+            margin-bottom: auto;
+        }
+
+        .completed-quote-card__name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0b0c0c;
+            margin: 0 0 10px 0;
+        }
+
+        .completed-quote-card__specialization {
+            color: #505a5f;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .completed-quote-card__footer {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 2px solid #f3f2f1;
         }
 
         .completed-quote-card__price {
-            font-size: 48px;
-            font-weight: bold;
-            color: #00703c;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
         }
 
-        .completed-quote-card__details {
-            margin-bottom: 20px;
+        .price-amount {
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: #0b0c0c;
+        }
+
+        .price-period {
+            font-size: 1.2rem;
+            color: #505a5f;
         }
 
         .completed-quote-card__action {
             text-align: right;
         }
 
-        .quote-partner--processing {
-            background-color: #f3f2f1;
-            border: 1px solid #b1b4b6;
+        .quote-button {
+            background: #00703c;
+            color: #ffffff;
+            border: 2px solid #00703c;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .quote-button:hover {
+            background: #005a30;
+            border-color: #005a30;
+            transform: translateY(-2px);
+        }
+
+        /* Status panel improvements */
+        .activity-status {
+            border-left: 5px solid #1d70b8;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 40px;
+        }
+
+        .govuk-panel--confirmation {
+            background: #ffffff;
+            color: #0b0c0c;
+        }
+
+        .govuk-panel__title {
+            color: #1d70b8;
+        }
+
+        /* Section styling */
+        .quote-section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+
+        .quote-section__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .quote-section__title {
+            margin: 0;
+        }
+
+        /* Update responsive styles */
+        @media (max-width: 768px) {
+            .completed-quotes {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .completed-quote-card {
+                padding: 20px;
+            }
+
+            .completed-quote-card__brand {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .partner-logo {
+                width: 160px;
+                height: 160px;
+            }
+
+            .completed-quote-card__content {
+                min-height: auto;
+                text-align: center;
+            }
+
+            .completed-quote-card__footer {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .completed-quote-card__price {
+                justify-content: center;
+            }
+
+            .quote-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
-<body>
+<body class="govuk-template__body">
+    <script>
+        document.body.className = ((document.body.className) ? document.body.className + ' ' : '') + 'js-enabled govuk-frontend-supported';
+    </script>
     <!-- Include the same header as other pages -->
     <header class="govuk-header" role="banner" data-module="govuk-header">
         <div class="govuk-header__container govuk-width-container">
@@ -199,8 +378,6 @@
 
     <div class="govuk-width-container">
         <main class="govuk-main-wrapper" id="main-content" role="main">
-            <h1 class="govuk-heading-l">Your Quote Results</h1>
-            
             <!-- Add id to the panel -->
             <div id="status-panel" class="govuk-panel govuk-panel--confirmation activity-status">
                 <h2 class="govuk-panel__title">
@@ -212,15 +389,25 @@
             </div>
 
             <div class="quote-results">
-                <h2 class="govuk-heading-m">Completed Quotes</h2>
-                <div id="completed-quotes" class="completed-quotes">
-                    <!-- Completed quotes will be inserted here -->
-                </div>
+                <!-- Completed Quotes Section -->
+                <section class="quote-section">
+                    <div class="quote-section__header">
+                        <h2 class="govuk-heading-m quote-section__title">Completed Quotes</h2>
+                    </div>
+                    <div id="completed-quotes" class="completed-quotes">
+                        <!-- Completed quotes will be inserted here -->
+                    </div>
+                </section>
 
-                <h2 class="govuk-heading-m">Processing Quotes</h2>
-                <div id="processing-quotes" class="quote-results__grid">
-                    <!-- Processing quotes will be inserted here -->
-                </div>
+                <!-- Processing Quotes Section -->
+                <section class="quote-section">
+                    <div class="quote-section__header">
+                        <h2 class="govuk-heading-m quote-section__title">Processing Quotes</h2>
+                    </div>
+                    <div id="processing-quotes" class="quote-results__grid">
+                        <!-- Processing quotes will be inserted here -->
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -255,102 +442,94 @@
             }
 
             updateStatus(state) {
-                // Update organization name if the element exists
+                // Update organization name
                 const orgNameEl = document.getElementById('org-name');
                 if (orgNameEl) {
                     orgNameEl.textContent = state.formData?.organisation?.name || 'Unknown Organization';
                 }
 
-                // Update status with friendly message if the element exists
+                // Update status message
                 const statusEl = document.getElementById('activity-status');
                 if (statusEl) {
-                    const statusMessages = {
-                        'processing': 'Processing your submission...',
-                        'getting_quotes': 'Getting quotes from partners...',
-                        'completed': 'All quotes received',
-                        'error': 'An error occurred'
-                    };
+                    // Convert quotes object to array first
+                    const quotesArray = state.quotes ? Object.values(state.quotes) : [];
+                    const completedQuotes = quotesArray.filter(q => q.status === 'complete');
+                    const totalQuotes = quotesArray.length;
                     
-                    statusEl.textContent = statusMessages[state.status] || state.status;
-                }
-                
-                // Update panel styling based on status if the element exists
-                const panel = document.getElementById('status-panel');
-                if (panel) {
-                    panel.className = `govuk-panel activity-status ${this.getStatusClass(state.status)}`;
-                }
-
-                // Add quote progress if we have an expected count
-                if (state.expectedPartnerCount) {
-                    const completedCount = Object.values(state.quotes)
-                        .filter(q => q.status === 'complete').length;
-                    
-                    if (statusEl) {
-                        statusEl.textContent = `Getting quotes from partners (${completedCount}/${state.expectedPartnerCount} complete)`;
+                    if (completedQuotes.length === totalQuotes && totalQuotes > 0) {
+                        statusEl.textContent = `${completedQuotes.length} quotes available`;
+                        
+                        // Update panel styling for completion
+                        const panel = document.getElementById('status-panel');
+                        if (panel) {
+                            panel.classList.remove('govuk-panel--processing');
+                            panel.classList.add('govuk-panel--confirmation');
+                        }
+                    } else if (totalQuotes > 0) {
+                        statusEl.textContent = `Getting quotes from partners (${completedQuotes.length}/${totalQuotes})`;
+                    } else {
+                        statusEl.textContent = 'Initializing quote requests...';
                     }
-                }
-            }
-
-            getStatusClass(status) {
-                switch(status) {
-                    case 'completed':
-                        return 'govuk-panel--confirmation';
-                    case 'error':
-                        return 'govuk-panel--error';
-                    default:
-                        return 'govuk-panel--processing';
                 }
             }
 
             updateQuotes(quotes) {
-                if (!quotes) return; // Guard against undefined quotes
+                if (!quotes) return;
                 
                 const completedContainer = document.getElementById('completed-quotes');
                 const processingContainer = document.getElementById('processing-quotes');
                 
-                if (!completedContainer || !processingContainer) return;
-                
-                // Clear both containers
-                completedContainer.innerHTML = '';
-                processingContainer.innerHTML = '';
+                // Convert quotes object to array and add partnerId
+                const quotesArray = Object.entries(quotes).map(([partnerId, quote]) => {
+                    console.log('Processing quote:', { partnerId, ...quote }); // Debug log
+                    return {
+                        partnerId,
+                        ...quote,
+                        logoUrl: quote.logoUrl || '/assets/images/default-logo.png'
+                    };
+                });
 
                 // Split quotes into completed and processing
-                const completedQuotes = [];
-                const processingQuotes = [];
-
-                Object.entries(quotes).forEach(([partnerId, quote]) => {
-                    const quoteWithId = { 
-                        partnerId, 
-                        ...quote,
-                    };
-                    
-                    if (quote.status === 'complete') {
-                        completedQuotes.push(quoteWithId);
-                    } else {
-                        processingQuotes.push(quoteWithId);
-                    }
-                });
+                const completedQuotes = quotesArray.filter(q => q.status === 'complete');
+                const processingQuotes = quotesArray.filter(q => q.status === 'processing');
 
                 // Sort completed quotes by price
                 completedQuotes.sort((a, b) => (a.price || 0) - (b.price || 0));
 
+                // Clear existing content
+                completedContainer.innerHTML = '';
+                processingContainer.innerHTML = '';
+
                 // Render completed quotes
                 completedQuotes.forEach(quote => {
+                    console.log('Rendering quote:', quote); // Debug log
                     completedContainer.innerHTML += `
                         <div class="completed-quote-card">
-                            <div class="completed-quote-card__header">
-                                <h3 class="govuk-heading-m">${quote.partnerName}</h3>
-                                <div class="completed-quote-card__price">
-                                    £${quote.price?.toLocaleString()} /month
+                            <div class="completed-quote-card__brand">
+                                <img 
+                                    src="${quote.logoUrl}" 
+                                    alt="${quote.partnerName || 'Partner'} logo"
+                                    class="partner-logo partner-logo--loading"
+                                    onerror="this.onerror=null; this.src='/assets/images/default-logo.png'; this.classList.remove('partner-logo--loading')"
+                                    onload="this.classList.remove('partner-logo--loading')"
+                                    loading="lazy"
+                                    crossorigin="anonymous"
+                                >
+                                <div class="completed-quote-card__content">
+                                    <div class="completed-quote-card__header">
+                                        <h3 class="completed-quote-card__name">${quote.partnerName || 'Generating Partner Quote'}</h3>
+                                        <p class="completed-quote-card__specialization">${quote.characteristics?.specialization || 'Cyber Insurance Provider'}</p>
+                                    </div>
+                                    <div class="completed-quote-card__footer">
+                                        <div class="completed-quote-card__price">
+                                            <span class="price-amount">£${quote.price?.toLocaleString()}</span>
+                                            <span class="price-period">per month</span>
+                                        </div>
+                                        <button class="quote-button">
+                                            Accept Quote
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="completed-quote-card__details">
-                                <p class="govuk-body">Quote received on ${new Date(quote.updatedAt).toLocaleDateString()}</p>
-                            </div>
-                            <div class="completed-quote-card__action">
-                                <button class="govuk-button" data-module="govuk-button">
-                                    Accept Quote
-                                </button>
                             </div>
                         </div>
                     `;
@@ -360,10 +539,15 @@
                 processingQuotes.forEach(quote => {
                     processingContainer.innerHTML += `
                         <div class="quote-partner quote-partner--processing">
-                            <h3 class="govuk-heading-s">${quote.partnerName}</h3>
-                            <div class="quote-partner__status">
-                                ${this.getStatusHTML(quote.status)}
+                            <h3 class="govuk-heading-s">${quote.partnerName || 'Generating Partner'}</h3>
+                            <div class="govuk-body">
+                                Status: ${this.formatStatus(quote.status)}
                             </div>
+                            ${quote.premium ? `
+                                <div class="govuk-body">
+                                    Premium: ${this.formatCurrency(quote.premium)}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 });
@@ -380,6 +564,19 @@
                     default:
                         return status;
                 }
+            }
+
+            formatStatus(status) {
+                const statusMessages = {
+                    'processing': 'Processing',
+                    'complete': 'Completed',
+                    'error': 'Error'
+                };
+                return statusMessages[status] || status;
+            }
+
+            formatCurrency(value) {
+                return '£' + value.toLocaleString();
             }
         }
 

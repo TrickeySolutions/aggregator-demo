@@ -49,7 +49,10 @@
 	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 
 	"ai": {
-		"binding": "AI"
+		"binding": "AI",
+		"gateway": {
+			"id": "aggregator-demo-gateway"
+		}
 	},
 
 	"durable_objects": {
@@ -115,5 +118,16 @@
 			"binding": "ACTIVITY_SUBMISSION_WORKFLOW",
 			"class_name": "ActivitySubmissionWorkflow"
 		}
-	]
+	],
+	"r2_buckets": [
+		{
+			"binding": "PARTNER_LOGOS",
+			"bucket_name": "partner-logos",
+			"preview_bucket_name": "partner-logos-dev"
+		}
+	],
+	"vars": {
+		"PARTNER_LOGOS_URL": "https://partner-logos.trickey.solutions",
+		"TURNSTILE_SITE_KEY": "0x4AAAAAABfrYMH-_9cGeJuB"
+	}
 }

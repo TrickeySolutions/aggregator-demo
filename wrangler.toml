@@ -1,1 +1,4 @@
- 
+[vars]
+TURNSTILE_SITE_KEY = "0x4AAAAAABfrYMH-_9cGeJuB"
+
+# Don't put the secret key here - it should only be in .dev.vars and Cloudflare secrets 

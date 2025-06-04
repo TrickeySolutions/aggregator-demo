@@ -36,12 +36,15 @@ export interface Env {
 	PARTNER_QUOTE_WORKFLOW: any;
 	ACTIVITY_SUBMISSION_WORKFLOW: any;
 	AI: {
-		run(model: string, options: { messages: { role: string, content: string }[] }): Promise<{ response: string }>;
+		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
 	};
+	TURNSTILE_SECRET_KEY: string;
 }
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		console.log('[index] TURNSTILE_SECRET_KEY present:', !!env.TURNSTILE_SECRET_KEY);
+		
 		const url = new URL(request.url);
 		
 		// API routes
