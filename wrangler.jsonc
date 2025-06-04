@@ -11,12 +11,6 @@
 		"enabled": true
 	},
 	/**
-	 * Smart Placement
-	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-	 */
-	// "placement": { "mode": "smart" },
-
-	/**
 	 * Bindings
 	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 	 * databases, object storage, AI inference, real-time communication and more.
@@ -41,17 +35,12 @@
 		"directory": "./public",
 		"binding": "ASSETS"
 	},
-
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
-
 	"ai": {
-		"binding": "AI"
+		"binding": "AI",
+		"gateway": {
+			"id": "aggregator-demo-gateway"
+		}
 	},
-
 	"durable_objects": {
 		"bindings": [
 			{
@@ -114,6 +103,13 @@
 			"name": "activity-submission",
 			"binding": "ACTIVITY_SUBMISSION_WORKFLOW",
 			"class_name": "ActivitySubmissionWorkflow"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "PARTNER_LOGOS",
+			"bucket_name": "partner-logos",
+			"preview_bucket_name": "partner-logos-dev"
 		}
 	]
 }

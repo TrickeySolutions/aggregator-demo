@@ -177,12 +177,10 @@
 
         /* Masthead styles */
         .app-masthead {
+            padding: 20px 0 10px;  /* Significantly reduced padding */
             background-color: #1d70b8;
             color: #ffffff;
-            margin-top: 0;
-            margin-bottom: 20px;  /* Reduced from 40px */
-            padding-top: 40px;
-            padding-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .app-masthead__title {
@@ -208,8 +206,8 @@
         @media (min-width: 40.0625em) {
             .app-masthead {
                 margin-top: 0;
-                padding-top: 60px;
-                padding-bottom: 60px;
+                padding-top: 30px;  /* Reduced from 60px */
+                padding-bottom: 30px;  /* Reduced from 60px */
             }
         }
 
@@ -331,7 +329,6 @@
                             <path fill="currentColor" d="M0 0h13l20 20-20 20H0l20-20z"></path>
                         </svg>
                     </a>
-                    <p>*This is a demonstration of a highly scalable architecture running on cloudflares platform - Not a real service</p>
                 </div>
                 <div class="govuk-grid-column-one-third app-masthead__image">
                     <img src="https://design-system.service.gov.uk/images/homepage-illustration.svg" alt="" role="presentation">
@@ -341,13 +338,47 @@
     </div>
 
     <div class="govuk-width-container">
+        <div class="govuk-phase-banner">
+            <p class="govuk-phase-banner__content">
+                <strong class="govuk-tag govuk-tag--red">
+                    DEMO
+                </strong>
+                <span class="govuk-phase-banner__text">
+                    This is a demonstration service - no real insurance quotes will be provided
+                </span>
+            </p>
+        </div>
+
+        <div class="govuk-inset-text govuk-!-margin-top-4">
+            <h2 class="govuk-heading-m">About this demo</h2>
+            <p class="govuk-body">This application showcases modern cloud architecture features including:</p>
+            <div class="govuk-grid-row govuk-!-margin-top-4">
+                <div class="govuk-grid-column-one-half">
+                    <h3 class="govuk-heading-s">Architecture</h3>
+                    <ul class="govuk-list govuk-list--bullet">
+                        <li>Serverless deployment on Cloudflare's global network</li>
+                        <li>Real-time state management with Durable Objects</li>
+                        <li>Asynchronous workflow processing</li>
+                    </ul>
+                </div>
+                <div class="govuk-grid-column-one-half">
+                    <h3 class="govuk-heading-s">Features</h3>
+                    <ul class="govuk-list govuk-list--bullet">
+                        <li>AI-powered quote generation</li>
+                        <li>Progressive form validation</li>
+                        <li>Real-time auto-saving</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <main class="govuk-main-wrapper app-main-wrapper" id="main-content" role="main">
             <hr class="govuk-section-break govuk-section-break--visible app-section-break--after-masthead">
 
             <!-- Cyber security resources section -->
             <div class="govuk-grid-row">
                 <div class="govuk-grid-column-full">
-                    <h2 class="govuk-heading-l">Cyber security resources</h2>
+                    <h2 class="govuk-heading-l">Genuine cyber security resources</h2>
                 </div>
                 <div class="govuk-grid-column-one-half">
                     <div class="app-card app-card--emergency">

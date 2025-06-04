@@ -2,7 +2,7 @@ import { Env } from "../index";
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
 // Define the input parameters for the workflow
-export interface PartnerQuoteParams {
+interface PartnerQuoteParams {
   activityId: string;
   partnerId: string;
   quoteData: any;
@@ -16,7 +16,6 @@ export interface PartnerQuoteResult {
   timestamp: number;
   message?: string;
 }
-
 
 export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuoteParams> {
   async run(event: WorkflowEvent<PartnerQuoteParams>, step: WorkflowStep): Promise<PartnerQuoteResult> {
@@ -107,7 +106,7 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
           }
           
           const partnerResponse = await response.json();
-          console.log('[PQ Workflow] Partner response:', partnerResponse);
+          //console.log('[PQ Workflow] Partner response:', partnerResponse);
           
           return { success: true, response: partnerResponse };
         } catch (error) {
@@ -174,4 +173,79 @@ export class PartnerQuoteWorkflow extends WorkflowEntrypoint<Env, PartnerQuotePa
   }
 }
 
-export default PartnerQuoteWorkflow; 
+export default PartnerQuoteWorkflow;
+
+export async function handlePartnerQuote(env: Env, params: PartnerQuoteParams) {
+    const { activityId, partnerId, quoteData } = params;
+    
+    console.log('[PQ Function] Processing Started for Partner:', partnerId);
+    
+    try {
+        // Initialize quote in activity state
+        const activityDO = env.ACTIVITIES.get(
+            env.ACTIVITIES.idFromString(activityId)
+        );
+        
+        await activityDO.fetch(new Request('http://localhost/api/update-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                partnerId,
+                update: {
+                    status: 'processing',
+                    updatedAt: new Date().toISOString()
+                }
+            })
+        }));
+
+        console.log('[PQ Function] Initialized quote in activity state');
+
+        // Process with Partner DO
+        const partnerDO = env.PARTNERS.get(
+            env.PARTNERS.idFromName(partnerId)
+        );
+        
+        console.log('[PQ Function] Processing quote with PartnerDO');
+        const response = await partnerDO.fetch(new Request('http://localhost/api/process-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quoteData })
+        }));
+
+        if (!response.ok) {
+            throw new Error(`Partner processing failed: ${await response.text()}`);
+        }
+
+        const partnerResponse = await response.json();
+        //console.log('[PQ Function] Received partner response:', partnerResponse);
+
+        // Update Activity DO with quote result
+        await activityDO.fetch(new Request('http://localhost/api/update-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                partnerId,
+                update: partnerResponse
+            })
+        }));
+
+        console.log('[PQ Function] Updated activity with quote result');
+
+        return {
+            success: true,
+            activityId,
+            partnerId,
+            timestamp: Date.now(),
+            message: 'Quote processed successfully'
+        };
+    } catch (error) {
+        console.error('[PQ Function] Error:', error);
+        return {
+            success: false,
+            activityId,
+            partnerId,
+            timestamp: Date.now(),
+            message: error instanceof Error ? error.message : 'Unknown error occurred'
+        };
+    }
+} 

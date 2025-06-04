@@ -31,6 +31,9 @@ class QuoteForm {
         this.touchedFields = new Set();
         this.validationTimeout = null;
         
+        // Add visited sections tracking
+        this.visitedSections = new Set(['organisation']); // Start with first section
+        
         this.setupWebSocket();
         this.setupNavigation();
         this.setupValidation();
@@ -41,38 +44,52 @@ class QuoteForm {
         this.setupRemoteWorkingInput();
         this.setupAIUsageConditionals();
 
-        // Add draft handling
+        // Add Turnstile token storage
+        this.turnstileToken = null;
+        
+        // Add global callback for Turnstile
+        window.onTurnstileSuccess = (token) => {
+            console.log('Turnstile verification completed');
+            this.turnstileToken = token;
+        };
+
+        // Update the click handler for submit/draft buttons
         document.querySelectorAll('[data-action="save-draft"], [data-action="submit"]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const action = btn.dataset.action;
                 try {
                     this.showLoading(true);
                     
-                    // Send appropriate message via WebSocket
-                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                        this.ws.send(JSON.stringify({
-                            type: action === 'save-draft' ? 'save_draft' : 'submit',
-                            activityId: this.activityId
-                        }));
+                    if (action === 'submit') {
+                        // Call handleSubmit for submit action
+                        await this.handleSubmit();
+                    } else {
+                        // Handle save draft action
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(JSON.stringify({
+                                type: 'save_draft',
+                                activityId: this.activityId
+                            }));
 
-                        // Wait for confirmation
-                        await new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-                            const handler = (event) => {
-                                const data = JSON.parse(event.data);
-                                if (data.type === 'state_update' && 
-                                    data.state.status === (action === 'save-draft' ? 'draft' : 'completed') &&
-                                    data.activityId === this.activityId) {
-                                    clearTimeout(timeout);
-                                    this.ws.removeEventListener('message', handler);
-                                    resolve(data);
-                                }
-                            };
-                            this.ws.addEventListener('message', handler);
-                        });
+                            // Wait for confirmation
+                            await new Promise((resolve, reject) => {
+                                const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+                                const handler = (event) => {
+                                    const data = JSON.parse(event.data);
+                                    if (data.type === 'state_update' && 
+                                        data.state.status === 'draft' &&
+                                        data.activityId === this.activityId) {
+                                        clearTimeout(timeout);
+                                        this.ws.removeEventListener('message', handler);
+                                        resolve(data);
+                                    }
+                                };
+                                this.ws.addEventListener('message', handler);
+                            });
 
-                        // Redirect to home page
-                        window.location.href = '/';
+                            // Redirect to home page
+                            window.location.href = '/';
+                        }
                     }
                 } catch (error) {
                     console.error('Failed to save/submit:', error);
@@ -143,10 +160,8 @@ class QuoteForm {
                     this.formState = data.state;
                     this.updateFormFromState();
                     
-                    // Add this: Update review section if we're currently viewing it
-                    if (this.currentSection === 'review') {
+                    // Always update review section when state changes
                         this.updateReviewSection();
-                    }
                 } else if (data.type === 'submit_success') {
                     // Hide loading indicator
                     this.showLoading(false);
@@ -278,18 +293,27 @@ class QuoteForm {
                 e.preventDefault();
                 
                 const currentSection = this.currentSection;
-                const formData = new FormData(form);
                 const sectionData = {};
                 
-                // Convert FormData to object
-                formData.forEach((value, key) => {
-                    if (sectionData[key]) {
-                        if (!Array.isArray(sectionData[key])) {
-                            sectionData[key] = [sectionData[key]];
+                // Get all form inputs, including those with default values
+                const inputs = form.querySelectorAll('input, select');
+                
+                inputs.forEach(input => {
+                    const name = input.name;
+                    if (!name) return;
+                    
+                    if (input.type === 'radio') {
+                        // For radio buttons, find the selected value
+                        const selectedRadio = form.querySelector(`input[name="${name}"]:checked`);
+                        if (selectedRadio) {
+                            sectionData[name] = selectedRadio.value === 'true' ? true : 
+                                              selectedRadio.value === 'false' ? false : 
+                                              selectedRadio.value;
                         }
-                        sectionData[key].push(value);
+                    } else if (input.type === 'checkbox') {
+                        sectionData[name] = input.checked;
                     } else {
-                        sectionData[key] = value;
+                        sectionData[name] = input.value;
                     }
                 });
 
@@ -302,32 +326,135 @@ class QuoteForm {
                 // Send state update via WebSocket
                 if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                     await this.ws.send(JSON.stringify({
-                        type: 'update_section',
-                        section: currentSection,
-                        data: sectionData
+                        type: 'form_update',
+                        formData: {
+                            [currentSection]: sectionData
+                        }
                     }));
                 }
 
-                // Move to next section
+                // Add next section to visited sections before moving
                 const currentIndex = this.sections.indexOf(currentSection);
                 if (currentIndex < this.sections.length - 1) {
                     const nextSection = this.sections[currentIndex + 1];
+                    this.visitedSections.add(nextSection);
                     await this.showSection(nextSection);
                 }
             });
         });
 
-        // Update progress bar navigation
-        document.querySelectorAll('.moj-progress-bar__link').forEach(link => {
+        // Update progress bar and review section navigation
+        document.querySelectorAll('.moj-progress-bar__link, .govuk-summary-list__actions a').forEach(link => {
             link.addEventListener('click', async (e) => {
                 e.preventDefault();
-                const section = e.target.closest('[data-section]').dataset.section;
-                await this.showSection(section);
+                const sectionElement = e.target.closest('[data-section]') || e.target.parentElement.closest('[data-section]');
+                if (sectionElement) {
+                    const targetSection = sectionElement.dataset.section;
+                    const currentIndex = this.sections.indexOf(this.currentSection);
+                    const targetIndex = this.sections.indexOf(targetSection);
+                    
+                    // Only allow navigation to:
+                    // 1. Previously visited sections
+                    // 2. The next section
+                    // 3. Review only if all other sections visited
+                    if (this.canNavigateToSection(targetSection)) {
+                        await this.showSection(targetSection);
+                    }
+                }
             });
         });
     }
 
+    canNavigateToSection(targetSection) {
+        const currentIndex = this.sections.indexOf(this.currentSection);
+        const targetIndex = this.sections.indexOf(targetSection);
+
+        // Can always go backwards
+        if (targetIndex < currentIndex) {
+            return true;
+        }
+
+        // Can go to next section
+        if (targetIndex === currentIndex + 1) {
+            return true;
+        }
+
+        // For review section, check if all previous sections visited
+        if (targetSection === 'review') {
+            return this.sections
+                .slice(0, -1) // Exclude review section itself
+                .every(section => this.visitedSections.has(section));
+        }
+
+        // Can go to any visited section
+        return this.visitedSections.has(targetSection);
+    }
+
+    updateNavigationState() {
+        // Update progress bar items based on visited sections and current position
+        document.querySelectorAll('.moj-progress-bar__item').forEach(item => {
+            const itemSection = item.querySelector('[data-section]').dataset.section;
+            const link = item.querySelector('.moj-progress-bar__link');
+            
+            item.classList.remove('moj-progress-bar__item--current');
+            item.classList.remove('moj-progress-bar__item--complete');
+            item.classList.remove('moj-progress-bar__item--disabled');
+
+            if (itemSection === this.currentSection) {
+                item.classList.add('moj-progress-bar__item--current');
+            } else if (this.visitedSections.has(itemSection)) {
+                item.classList.add('moj-progress-bar__item--complete');
+            } else if (!this.canNavigateToSection(itemSection)) {
+                item.classList.add('moj-progress-bar__item--disabled');
+                link.style.pointerEvents = 'none';
+            } else {
+                link.style.pointerEvents = 'auto';
+            }
+        });
+    }
+
     async showSection(sectionId) {
+        // Save current section data before switching
+        const currentForm = document.getElementById(`${this.currentSection}-form`);
+        if (currentForm) {
+            const sectionData = {};
+            const inputs = currentForm.querySelectorAll('input, select');
+            
+            inputs.forEach(input => {
+                const name = input.name;
+                if (!name) return;
+                
+                if (input.type === 'radio') {
+                    const selectedRadio = currentForm.querySelector(`input[name="${name}"]:checked`);
+                    if (selectedRadio) {
+                        sectionData[name] = selectedRadio.value === 'true' ? true : 
+                                          selectedRadio.value === 'false' ? false : 
+                                          selectedRadio.value;
+                    }
+                } else if (input.type === 'checkbox') {
+                    sectionData[name] = input.checked;
+                } else {
+                    sectionData[name] = input.value;
+                }
+            });
+
+            // Update form state
+            if (!this.formState.formData) {
+                this.formState.formData = {};
+            }
+            this.formState.formData[this.currentSection] = sectionData;
+
+            // Send state update via WebSocket
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                await this.ws.send(JSON.stringify({
+                    type: 'form_update',
+                    formData: {
+                        [this.currentSection]: sectionData
+                    }
+                }));
+            }
+        }
+
         // Hide all sections
         document.querySelectorAll('.form-section').forEach(section => {
             section.hidden = true;
@@ -339,24 +466,17 @@ class QuoteForm {
             section.hidden = false;
             this.currentSection = sectionId;
             
-            // Update progress bar
-            document.querySelectorAll('.moj-progress-bar__item').forEach(item => {
-                const itemSection = item.querySelector('[data-section]').dataset.section;
-                item.classList.remove('moj-progress-bar__item--current');
-                item.classList.remove('moj-progress-bar__item--complete');
-                
-                if (itemSection === sectionId) {
-                    item.classList.add('moj-progress-bar__item--current');
-                } else if (this.sections.indexOf(itemSection) < this.sections.indexOf(sectionId)) {
-                    item.classList.add('moj-progress-bar__item--complete');
-                }
-            });
+            // Update navigation state
+            this.updateNavigationState();
 
             // If showing review section, update its content
             if (sectionId === 'review') {
                 this.updateReviewSection();
             }
         }
+
+        // Add section to visited sections
+        this.visitedSections.add(sectionId);
     }
 
     populateReviewSection() {
@@ -457,108 +577,92 @@ class QuoteForm {
     }
 
     updateReviewSection() {
-        const dl = document.querySelector('#review-section .govuk-summary-list');
-        if (!dl || !this.formState.formData) return;
-        
-        dl.innerHTML = '';
+        if (!this.formState?.formData) return;
 
-        // Define sections with their fields and display labels
-        const sections = {
-            organisation: {
-                title: 'Organisation Details',
-                fields: {
-                    name: 'Organisation name',
-                    sector_type: 'Sector type',
-                    industry: 'Industry sector',
-                    revenue: 'Annual revenue',
-                    employees: 'Number of employees',
-                    remote_percentage: 'Remote working'
-                }
-            },
-            exposure: {
-                title: 'Exposure Assessment',
-                fields: {
-                    'data-pii': 'Personal Identifiable Information',
-                    'data-payment': 'Payment Information',
-                    'data-health': 'Health Records',
-                    'data-financial': 'Financial Records',
-                    'data-intellectual': 'Intellectual Property',
-                    'asset-websites': 'Public Websites',
-                    'asset-apis': 'Public APIs',
-                    'asset-mobile': 'Mobile Applications',
-                    'infra-cloud': 'Cloud Infrastructure',
-                    'infra-onprem': 'On-premises Data Centers',
-                    'infra-ip': 'Own IP Prefixes',
-                    'ai-copilot': 'AI Assistants/Copilots',
-                    'ai-approved-tools': 'Approved AI Tools',
-                    'ai-ml-models': 'Custom ML Models',
-                    'ai-applications': 'AI-Based Applications'
-                }
-            },
-            security: {
-                title: 'Security Controls',
-                fields: {
-                    'security-ddos': 'DDoS Protection',
-                    'security-waf': 'Web Application Firewall (WAF)',
-                    'security-bot': 'Bot Management',
-                    'security-lb': 'Load Balancing',
-                    'security-vpn': 'VPN/Zero Trust Network Access',
-                    'security-ai-gateway': 'AI Gateway',
-                    'security-dlp': 'Data Loss Protection',
-                    'security-phishing': 'Phishing Protection',
-                    'security-brand': 'Brand Intelligence',
-                    'security-user-filter': 'User Web Filtering',
-                    'security-server-filter': 'Server Web Filtering',
-                    'security-endpoint': 'Endpoint Management'
+        // Helper function to format boolean values
+        const formatValue = (value) => {
+            if (typeof value === 'boolean' || value === 'true' || value === 'false') {
+                return value === true || value === 'true' ? 'Yes' : 'No';
+            }
+            if (typeof value === 'number') {
+                // Format currency values
+                if (value >= 1000) {
+                    return new Intl.NumberFormat('en-GB', {
+                        style: 'currency',
+                        currency: 'GBP',
+                        notation: 'compact',
+                        maximumFractionDigits: 1
+                    }).format(value);
                 }
             }
+            return value || 'Not provided';
         };
 
-        // Create section rows
-        Object.entries(sections).forEach(([sectionId, section]) => {
-            // Add section header with aligned structure
-            dl.innerHTML += `
-                <div class="govuk-summary-list__row govuk-summary-list__row--header">
-                    <dt class="govuk-summary-list__key govuk-heading-m">
-                        ${section.title}
-                    </dt>
-                    <dd class="govuk-summary-list__value">
-                        <!-- Empty value cell to maintain alignment -->
-                    </dd>
-                    <dd class="govuk-summary-list__actions">
-                        <a class="govuk-link" href="#" data-section="${sectionId}">
-                            Change<span class="govuk-visually-hidden"> ${section.title}</span>
-                        </a>
-                    </dd>
-                </div>
-            `;
+        // Update Organization Details
+        const orgFields = {
+            'name': 'review-org-name',
+            'sector-type': 'review-sector-type',
+            'industry': 'review-industry',
+            'revenue': 'review-revenue',
+            'employees': 'review-employees',
+            'remote_percentage': 'review-remote'
+        };
 
-            // Add field rows
-            const sectionData = this.formState.formData[sectionId] || {};
-            Object.entries(section.fields).forEach(([key, label]) => {
-                const value = sectionData[key];
-                
-                // Skip if no value or false for checkboxes
-                if (value === undefined || value === false || (Array.isArray(value) && value.length === 0)) {
-                    return;
-                }
+        Object.entries(orgFields).forEach(([field, elementId]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const value = this.formState.formData.organisation?.[field];
+                element.textContent = formatValue(value);
+            }
+        });
 
-                dl.innerHTML += `
-                    <div class="govuk-summary-list__row">
-                        <dt class="govuk-summary-list__key">
-                            ${label}
-                        </dt>
-                        <dd class="govuk-summary-list__value">
-                            ${this.formatReviewValue(value)}
-                        </dd>
-                        <dd class="govuk-summary-list__actions">
-                            <a class="govuk-link" href="#" data-section="${sectionId}">
-                                Change<span class="govuk-visually-hidden"> ${label}</span>
-                            </a>
-                        </dd>
-                    </div>
-                `;
-            });
+        // Update Risk Exposure
+        const exposureFields = {
+            'data-pii': 'review-data-pii',
+            'data-payment': 'review-data-payment',
+            'data-health': 'review-data-health',
+            'data-financial': 'review-data-financial',
+            'data-intellectual': 'review-data-intellectual',
+            'asset-websites': 'review-asset-websites',
+            'asset-apis': 'review-asset-apis',
+            'asset-mobile': 'review-asset-mobile',
+            'infra-cloud': 'review-infra-cloud',
+            'infra-onprem': 'review-infra-onprem'
+        };
+
+        Object.entries(exposureFields).forEach(([field, elementId]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                const value = this.formState.formData.exposure?.[field];
+                element.textContent = formatValue(value);
+            }
+        });
+
+        // Update AI Usage separately as it's a radio selection
+        const aiUsageElement = document.getElementById('review-ai-usage');
+        if (aiUsageElement) {
+            const aiValue = this.formState.formData.exposure?.['ai-usage'];
+            const aiLabels = {
+                'none': 'No AI usage',
+                'basic': 'Basic AI tools',
+                'advanced': 'Advanced AI',
+                'core': 'AI is core to business'
+            };
+            aiUsageElement.textContent = aiLabels[aiValue] || 'Not specified';
+        }
+
+        // Update Security Controls
+        const securityControls = [
+            'waf', 'api', 'bot', 'ddos', 'firewall', 'mfa', 
+            'zerotrust', 'dlp', 'encryption', 'backup'
+        ];
+
+        securityControls.forEach(control => {
+            const element = document.getElementById(`review-security-${control}`);
+            if (element) {
+                const value = this.formState.formData.security?.[`security-${control}`];
+                element.textContent = formatValue(value);
+            }
         });
     }
 
@@ -638,17 +742,21 @@ class QuoteForm {
         const formData = new FormData(form);
         const sectionData = {};
         
+        // Get all form inputs, including those with default values
         const inputs = form.querySelectorAll('input, select');
         
         inputs.forEach(input => {
             const name = input.name;
             if (!name) return;
             
-            if (input.type === 'checkbox') {
-                // Handle all checkboxes as individual boolean fields
+            if (input.type === 'radio') {
+                // For radio buttons, find the selected value
+                const selectedRadio = form.querySelector(`input[name="${name}"]:checked`);
+                if (selectedRadio) {
+                    sectionData[name] = selectedRadio.value;
+                }
+            } else if (input.type === 'checkbox') {
                 sectionData[name] = input.checked;
-            } else if (input.tagName.toLowerCase() === 'select') {
-                sectionData[name] = input.value;
             } else {
                 sectionData[name] = formData.get(name);
             }
@@ -1273,6 +1381,76 @@ class QuoteForm {
                 updateConditionals(e.target);
             });
         });
+    }
+
+    async handleSubmit() {
+        try {
+            // Check for Turnstile token
+            if (!this.turnstileToken) {
+                this.showError('Verification Required', 'Please complete the security verification before submitting.');
+                return;
+            }
+
+            // Show loading state
+            this.showLoading(true);
+
+            // Send the form data with Turnstile token
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'submit',
+                    activityId: this.activityId,
+                    turnstileToken: this.turnstileToken
+                };
+                
+                console.log('Sending submission with token:', {
+                    ...message,
+                    turnstileToken: '(token present)'
+                });
+                
+                this.ws.send(JSON.stringify(message));
+
+                // Wait for response with increased timeout
+                const response = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('Request timed out. Please try again.')), 30000);
+                    
+                    const handler = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('Received response:', data);
+                            if (data.type === 'submit_success' || data.type === 'error') {
+                                clearTimeout(timeout);
+                                this.ws.removeEventListener('message', handler);
+                                resolve(data);
+                            }
+                        } catch (err) {
+                            console.error('Error parsing WebSocket message:', err);
+                            reject(err);
+                        }
+                    };
+                    
+                    this.ws.addEventListener('message', handler);
+                });
+
+                if (response.type === 'error') {
+                    throw new Error(response.message || 'Submission failed');
+                }
+
+                // Handle successful submission
+                window.location.href = response.redirectUrl;
+            } else {
+                throw new Error('WebSocket connection lost. Please refresh the page.');
+            }
+        } catch (error) {
+            console.error('Submission failed:', error);
+            this.showError('Submission Failed', error.message || 'Failed to submit quote request. Please try again.');
+            // Reset Turnstile widget and token
+            if (window.turnstile) {
+                turnstile.reset();
+                this.turnstileToken = null;
+            }
+        } finally {
+            this.showLoading(false);
+        }
     }
 }
 
