@@ -9,6 +9,8 @@
  */
 
 import { RiskProfile } from '../types/risk-profile';
+import { handleActivitySubmission } from '../workflows/activity-submission';
+import { verifyTurnstileToken } from '../utils/turnstile';
 
 // Define valid sections as const array
 const sections = ['organisation', 'exposure', 'security', 'review'] as const;
@@ -33,10 +35,26 @@ interface ActivityState {
   expectedPartnerCount?: number;
 }
 
+interface QuoteUpdate {
+    partnerId: string;
+    partnerName: string;
+    status: 'processing' | 'complete' | 'error';
+    price?: number;
+    logoUrl?: string;
+    characteristics?: any;
+    updatedAt: string;
+}
+
+interface SubmitData {
+    type: string;
+    activityId: string;
+    turnstileToken?: string;
+}
+
 export class ActivityDO {
   private state: DurableObjectState;
   private sessions: Set<WebSocket>;
-  private env: any; // Will contain bindings
+  private env: Env;
   // Initialize with default state to fix "no initializer" error
   private activityState: ActivityState = {
     currentSection: 'organisation',
@@ -47,7 +65,7 @@ export class ActivityDO {
     updatedAt: Date.now()
   };
 
-  constructor(state: DurableObjectState, env: any) {
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.sessions = new Set();
     this.env = env;
@@ -82,29 +100,25 @@ export class ActivityDO {
     await this.state.storage.put('state', this.activityState);
   }
 
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    console.log('[ActivityDO] Handling request:', url.pathname);
-    console.log('[ActivityDO] DO ID:', this.state.id.toString());
-    console.log('[ActivityDO] URL activity ID:', url.pathname.split('/').filter(Boolean)[4]);
+    console.log('[ActivityDO] Handling:', url.pathname);
     
     // Load state first
     const stored = await this.state.storage.get<ActivityState>('state');
     
-    // Initialize or load state
     if (stored) {
-        console.log('[ActivityDO] Loaded stored state with customer ID:', stored.customerId);
+        console.log('[ActivityDO] Loaded stored state');
         this.activityState = stored;
     } else if (request.method === 'POST' && request.url.includes('/init')) {
-        // Extract customer ID from URL path correctly
         const parts = url.pathname.split('/');
         const customerIndex = parts.indexOf('customer');
         if (customerIndex === -1 || !parts[customerIndex + 1]) {
-            console.error('[ActivityDO] Failed to extract customer ID from URL:', url.pathname);
+            console.error('[ActivityDO] Failed to extract customer ID');
             return new Response('Invalid customer ID', { status: 400 });
         }
         const customerId = parts[customerIndex + 1];
-        console.log('[ActivityDO] Initializing new state with customer ID:', customerId);
+        console.log('[ActivityDO] Initializing new state');
         
         // Initialize state
         this.activityState = {
@@ -116,13 +130,12 @@ export class ActivityDO {
             customerId
         };
         await this.state.storage.put('state', this.activityState);
-        console.log('[ActivityDO] Saved initial state with customer ID:', customerId);
         return new Response('OK');
     }
 
     // Handle WebSocket upgrade
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
-        console.log('[ActivityDO] Handling WebSocket upgrade with state:', JSON.stringify(this.activityState, null, 2));
+        console.log('[ActivityDO] WebSocket connection opened');
         const pair = new WebSocketPair();
         const server = pair[1];
         server.accept();
@@ -167,7 +180,8 @@ export class ActivityDO {
                     });
                 } else if (data.type === 'submit') {
                     try {
-                        await this.handleSubmit(data);
+                        // Pass the execution context to handleSubmit
+                        await this.handleSubmit(data, ctx);
                     } catch (error) {
                         console.error('Submit error:', error);
                         server.send(JSON.stringify({
@@ -220,15 +234,13 @@ export class ActivityDO {
 
     if (request.method === 'POST') {
         if (request.headers.get('Content-Type') === 'application/json') {
-            const body = await request.json();
+            const body = await request.json() as { partnerId: string } & (QuoteUpdate | { update: QuoteUpdate });
             
             // Handle quote updates
             if (url.pathname === '/api/update-quote' && body.partnerId) {
-                console.log('[ActivityDO] Updating quote with body:', body);
+                console.log('[ActivityDO] Received quote update');
                 await this.updateQuote(body.partnerId, body);
-                return new Response(JSON.stringify({ success: true }), {
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return new Response(JSON.stringify({ success: true }));
             }
 
             // Handle other state updates
@@ -285,12 +297,32 @@ export class ActivityDO {
     }
   }
 
-  async handleSubmit(data: { activityId: string }) {
-    console.log('[ActivityDO] Starting submit with state:', JSON.stringify(this.activityState, null, 2));
+  async handleSubmit(data: SubmitData, ctx?: ExecutionContext) {
+    console.log('[ActivityDO] Starting submit with data:', JSON.stringify({
+        ...data,
+        turnstileToken: data.turnstileToken ? '(token present)' : undefined
+    }, null, 2));
     
     if (data.activityId !== this.state.id.toString()) {
         console.error('[ActivityDO] Activity ID mismatch:', data.activityId, 'vs', this.state.id.toString());
         throw new Error('Activity ID mismatch');
+    }
+
+    // Verify Turnstile token
+    try {
+        if (!data.turnstileToken) {
+            console.error('[ActivityDO] Missing turnstile token in request data');
+            throw new Error('Security verification token is missing');
+        }
+        
+        console.log('[ActivityDO] Verifying turnstile token');
+        const verificationResult = await verifyTurnstileToken(this.env, data.turnstileToken);
+        console.log('[ActivityDO] Turnstile verification successful:', verificationResult);
+        
+    } catch (error) {
+        console.error('[ActivityDO] Turnstile verification failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Security verification failed';
+        throw new Error(errorMessage);
     }
 
     if (!this.activityState.customerId) {
@@ -300,36 +332,21 @@ export class ActivityDO {
 
     // Update status
     this.activityState.status = 'processing';
-    
-    // Initialize empty quotes object
     this.activityState.quotes = {};
-
-    // Save state before sending to queue
     await this.updateState(this.activityState);
-    console.log('[ActivityDO] State updated, attempting to create workflow directly');
+    console.log('[ActivityDO] Updated state to processing');
 
     const activityId = this.state.id.toString();
-    console.log('[ActivityDO] Activity ID:', activityId);
+    console.log('[ActivityDO] Starting activity submission for:', activityId);
 
-    const workflowParams = {
-        activityId,
-        formData: this.activityState.formData
-    };
-
-    try {
-        // Try to create workflow directly first
-        await this.env.ACTIVITY_SUBMISSION_WORKFLOW.create({
-            params: workflowParams
-        });
-        console.log('[ActivityDO] Workflow created directly');
-    } catch (error) {
-        // If workflow creation fails (likely due to rate limiting), fall back to queue
-        console.log('[ActivityDO] Direct workflow creation failed, falling back to queue:', error);
-        await this.env.ACTIVITY_SUBMISSION_QUEUE.send(workflowParams);
-        console.log('[ActivityDO] Message sent to queue as fallback');
+    // Start the submission process but don't wait for it
+    const promise = handleActivitySubmission(this.env, activityId, this.activityState.formData);
+    if (ctx) {
+        console.log('[ActivityDO] Using waitUntil for background processing');
+        ctx.waitUntil(promise);
     }
 
-    // Send redirect URL with same activity ID
+    // Send redirect URL immediately
     const redirectUrl = `/customer/${this.activityState.customerId}/activity/${activityId}/results`;
     console.log('[ActivityDO] Redirect URL:', redirectUrl);
 
@@ -348,8 +365,9 @@ export class ActivityDO {
     return { success: true };
   }
 
-  async updateQuote(partnerId: string, update: any) {
-    console.log('[ActivityDO] Updating quote for partner:', partnerId, 'with update:', update);
+  private async updateQuote(partnerId: string, data: { update?: QuoteUpdate } | QuoteUpdate) {
+    //console.log('[ActivityDO] Updating quote with data:', data);
+    console.log('[ActivityDO] Processing quote update for partner:', partnerId);
     
     // Initialize quotes object if it doesn't exist
     if (!this.activityState.quotes) {
@@ -357,16 +375,26 @@ export class ActivityDO {
     }
 
     // Extract the actual update data from the request
-    const quoteUpdate = update.update || update;
+    const quoteUpdate = ('update' in data) ? data.update : data;
     
+    if (!quoteUpdate) {
+        throw new Error('No quote update data provided');
+    }
+
     // Initialize or update the quote for this partner
     this.activityState.quotes[partnerId] = {
         ...this.activityState.quotes[partnerId],  // Preserve existing data
-        partnerName: quoteUpdate.partnerName || this.activityState.quotes[partnerId]?.partnerName || `Partner ${partnerId}`,
-        status: quoteUpdate.status || 'processing',
-        updatedAt: quoteUpdate.updatedAt || new Date().toISOString(),
-        ...(quoteUpdate.price !== undefined && { price: quoteUpdate.price })
+        partnerName: quoteUpdate.partnerName,
+        status: quoteUpdate.status,
+        updatedAt: quoteUpdate.updatedAt,
+        logoUrl: quoteUpdate.logoUrl,  // Explicitly include logoUrl
+        ...(quoteUpdate.price !== undefined && { price: quoteUpdate.price }),
+        ...(quoteUpdate.characteristics && { characteristics: quoteUpdate.characteristics })
     };
+
+    // Log the updated quote for debugging
+    console.log('[ActivityDO] Updated quote:', this.activityState.quotes[partnerId].partnerName);
+    //console.log('[ActivityDO] Updated quote:', this.activityState.quotes[partnerId]);
 
     // Check if all expected quotes are complete
     const completedQuotes = Object.values(this.activityState.quotes)
@@ -374,7 +402,7 @@ export class ActivityDO {
     
     const expectedCount = this.activityState.expectedPartnerCount || 0;
     
-    console.log(`[ActivityDO] Completed quotes: ${completedQuotes}/${expectedCount}`);
+    console.log(`[ActivityDO] Quote progress: ${completedQuotes}/${expectedCount}`);
     
     if (completedQuotes === expectedCount) {
         this.activityState.status = 'completed';

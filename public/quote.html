@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get a Quote - Cyber Insurance Platform</title>
     <link rel="stylesheet" href="/govuk-frontend/govuk.min.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         .govuk-header {
             background-color: #0b0c0c;
             border-bottom: 10px solid #1d70b8;
+            padding: 15px 0;  /* Match other pages */
         }
 
         .govuk-header__container {
             border-bottom: none;
-            padding-top: 10px;
-            padding-bottom: 10px;
+            margin-bottom: 0;
+            padding: 0;  /* Reset padding */
         }
 
         .govuk-header__logo {
@@ -460,19 +462,43 @@
             text-decoration-thickness: 3px;
         }
 
-        /* Responsive adjustments */
+        /* Update responsive adjustments */
         @media (max-width: 768px) {
             .trickey-logo-text {
-                font-size: 32px;  /* Slightly smaller on mobile */
+                font-size: 32px;
             }
             .govuk-header__content {
                 padding-left: 0;
+                border-left: none;
+                margin-top: 10px;
             }
+            .govuk-header__link--service-name {
+                font-size: 24px !important;
+            }
+        }
+
+        /* Turnstile widget styling */
+        .govuk-form-group .cf-turnstile {
+            margin-bottom: 20px;
+        }
+        
+        /* Center the widget */
+        .govuk-form-group .cf-turnstile iframe {
+            margin: 0 auto;
+            display: block;
+        }
+        
+        /* Error state styling */
+        .govuk-form-group--error .cf-turnstile {
+            border-left: 5px solid #d4351c;
+            padding-left: 15px;
         }
     </style>
 </head>
 <body class="govuk-template__body">
-    <script>document.body.className = document.body.className + ' govuk-frontend-supported';</script>
+    <script>
+        document.body.className = ((document.body.className) ? document.body.className + ' ' : '') + 'js-enabled govuk-frontend-supported';
+    </script>
 
     <header class="govuk-header" role="banner" data-module="govuk-header">
         <div class="govuk-header__container govuk-width-container">
@@ -700,58 +726,91 @@
                             </legend>
                             
                             <div class="govuk-hint">
-                                Select all types of sensitive data that your organisation processes
+                                Tell us about the types of data your organisation handles
                             </div>
 
-                            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="data-pii" 
-                                           name="data-pii" type="checkbox" value="pii">
-                                    <label class="govuk-label govuk-checkboxes__label" for="data-pii">
-                                        Personal Identifiable Information (PII)
-                                    </label>
-                                    <div id="data-pii-hint" class="govuk-hint govuk-checkboxes__hint">
-                                        Names, addresses, contact details, etc.
+                            <!-- Convert checkboxes to Yes/No radios -->
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="data-pii">
+                                    Do you process personal data (PII)?
+                                    <div class="govuk-hint">Names, addresses, contact details, etc.</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-pii-yes" name="data-pii" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="data-pii-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-pii-no" name="data-pii" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="data-pii-no">No</label>
                                     </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="data-payment" 
-                                           name="data-payment" type="checkbox" value="payment">
-                                    <label class="govuk-label govuk-checkboxes__label" for="data-payment">
-                                        Payment Information
-                                    </label>
-                                    <div id="data-payment-hint" class="govuk-hint govuk-checkboxes__hint">
-                                        Credit cards, bank details, payment processing
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="data-payment">
+                                    Do you process payment information?
+                                    <div class="govuk-hint">Credit cards, bank details, payment processing</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-payment-yes" name="data-payment" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="data-payment-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-payment-no" name="data-payment" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="data-payment-no">No</label>
                                     </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="data-health" 
-                                           name="data-health" type="checkbox" value="health">
-                                    <label class="govuk-label govuk-checkboxes__label" for="data-health">
-                                        Health Records
-                                    </label>
-                                    <div id="data-health-hint" class="govuk-hint govuk-checkboxes__hint">
-                                        Medical records, health information
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="data-health">
+                                    Do you process health records?
+                                    <div class="govuk-hint">Medical records, health information</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-health-yes" name="data-health" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="data-health-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-health-no" name="data-health" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="data-health-no">No</label>
                                     </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="data-financial" 
-                                           name="data-financial" type="checkbox" value="financial">
-                                    <label class="govuk-label govuk-checkboxes__label" for="data-financial">
-                                        Financial Records
-                                    </label>
-                                    <div id="data-financial-hint" class="govuk-hint govuk-checkboxes__hint">
-                                        Financial statements, tax information
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="data-financial">
+                                    Do you process financial records?
+                                    <div class="govuk-hint">Financial statements, tax information</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-financial-yes" name="data-financial" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="data-financial-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-financial-no" name="data-financial" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="data-financial-no">No</label>
                                     </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="data-intellectual" 
-                                           name="data-intellectual" type="checkbox" value="intellectual">
-                                    <label class="govuk-label govuk-checkboxes__label" for="data-intellectual">
-                                        Intellectual Property
-                                    </label>
-                                    <div id="data-intellectual-hint" class="govuk-hint govuk-checkboxes__hint">
-                                        Trade secrets, patents, research data
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="data-intellectual">
+                                    Do you handle intellectual property?
+                                    <div class="govuk-hint">Trade secrets, patents, research data</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-intellectual-yes" name="data-intellectual" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="data-intellectual-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="data-intellectual-no" name="data-intellectual" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="data-intellectual-no">No</label>
                                     </div>
                                 </div>
                             </div>
@@ -771,267 +830,124 @@
 
                             <!-- Public-facing Assets -->
                             <div class="govuk-form-group">
-                                <label class="govuk-label" for="public-assets">
-                                    Public-facing digital assets
+                                <label class="govuk-label" for="asset-websites">
+                                    Do you have public-facing websites?
                                 </label>
-                                <div class="govuk-checkboxes">
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="asset-websites" 
-                                               name="asset-websites" type="checkbox" value="websites">
-                                        <label class="govuk-label govuk-checkboxes__label" for="asset-websites">
-                                            Public Websites
-                                        </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-websites-yes" name="asset-websites" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="asset-websites-yes">Yes</label>
                                     </div>
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="asset-apis" 
-                                               name="asset-apis" type="checkbox" value="apis">
-                                        <label class="govuk-label govuk-checkboxes__label" for="asset-apis">
-                                            Public APIs
-                                        </label>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-websites-no" name="asset-websites" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="asset-websites-no">No</label>
                                     </div>
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="asset-mobile" 
-                                               name="asset-mobile" type="checkbox" value="mobile">
-                                        <label class="govuk-label govuk-checkboxes__label" for="asset-mobile">
-                                            Mobile Applications
-                                        </label>
+                                </div>
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="asset-apis">
+                                    Do you provide public APIs?
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-apis-yes" name="asset-apis" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="asset-apis-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-apis-no" name="asset-apis" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="asset-apis-no">No</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="asset-mobile">
+                                    Do you have mobile applications?
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-mobile-yes" name="asset-mobile" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="asset-mobile-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="asset-mobile-no" name="asset-mobile" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="asset-mobile-no">No</label>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Infrastructure -->
                             <div class="govuk-form-group">
-                                <label class="govuk-label" for="infrastructure">
-                                    Infrastructure footprint
+                                <label class="govuk-label" for="infra-cloud">
+                                    Do you use cloud infrastructure?
+                                    <div class="govuk-hint">AWS, Azure, Google Cloud, etc.</div>
                                 </label>
-                                <div class="govuk-checkboxes">
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="infra-cloud" 
-                                               name="infra-cloud" type="checkbox" value="cloud">
-                                        <label class="govuk-label govuk-checkboxes__label" for="infra-cloud">
-                                            Cloud Infrastructure
-                                        </label>
-                                        <div class="govuk-hint govuk-checkboxes__hint">
-                                            AWS, Azure, Google Cloud, etc.
-                                        </div>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="infra-cloud-yes" name="infra-cloud" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="infra-cloud-yes">Yes</label>
                                     </div>
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="infra-onprem" 
-                                               name="infra-onprem" type="checkbox" value="onprem">
-                                        <label class="govuk-label govuk-checkboxes__label" for="infra-onprem">
-                                            On-premises Data Centers
-                                        </label>
-                                    </div>
-                                    <div class="govuk-checkboxes__item">
-                                        <input class="govuk-checkboxes__input" id="infra-ip" 
-                                               name="infra-ip" type="checkbox" value="own_ip">
-                                        <label class="govuk-label govuk-checkboxes__label" for="infra-ip">
-                                            Own IP Prefixes
-                                        </label>
-                                        <div class="govuk-hint govuk-checkboxes__hint">
-                                            Organization has its own IP address ranges
-                                        </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="infra-cloud-no" name="infra-cloud" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="infra-cloud-no">No</label>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- AI/ML Usage -->
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="infra-onprem">
+                                    Do you have on-premises data centers?
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="infra-onprem-yes" name="infra-onprem" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="infra-onprem-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="infra-onprem-no" name="infra-onprem" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="infra-onprem-no">No</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI Usage - Simplified -->
                             <div class="govuk-form-group">
                                 <fieldset class="govuk-fieldset">
                                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                                        AI and Machine Learning
+                                        AI Usage
                                     </legend>
                                     
                                     <div class="govuk-hint">
-                                        Select all AI/ML technologies used in your organisation
+                                        Tell us about your organisation's use of AI technologies
                                     </div>
 
-                                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                                        <!-- Copilot Section -->
-                                        <div class="govuk-checkboxes__item">
-                                            <input class="govuk-checkboxes__input" id="ai-copilot" 
-                                                   name="ai-copilot" type="checkbox" value="copilot"
-                                                   aria-controls="copilot-conditional"
-                                                   aria-expanded="false">
-                                            <label class="govuk-label govuk-checkboxes__label" for="ai-copilot">
-                                                AI Assistants/Copilots
-                                            </label>
-                                            <div class="govuk-hint govuk-checkboxes__hint">
-                                                e.g., GitHub Copilot, ChatGPT, Claude
+                                    <div class="govuk-form-group">
+                                        <label class="govuk-label" for="ai-usage">How do you use AI in your organisation?</label>
+                                        <div class="govuk-radios">
+                                            <div class="govuk-radios__item">
+                                                <input class="govuk-radios__input" id="ai-none" name="ai-usage" type="radio" value="none" checked>
+                                                <label class="govuk-label govuk-radios__label" for="ai-none">
+                                                    We don't use AI
+                                                </label>
                                             </div>
-                                        </div>
-                                        <!-- Copilot Conditional -->
-                                        <div class="govuk-checkboxes__conditional govuk-checkboxes__conditional--hidden" 
-                                             id="copilot-conditional">
-                    <div class="govuk-form-group">
-                        <fieldset class="govuk-fieldset">
-                            <legend class="govuk-fieldset__legend">
-                                                        How are AI assistants used in your organization?
-                            </legend>
-                                                    <div class="govuk-checkboxes govuk-checkboxes--small">
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="copilot-unrestricted" 
-                                                                   name="copilot_usage" type="checkbox" value="unrestricted">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="copilot-unrestricted">
-                                                                Unrestricted usage
-                                    </label>
-                                </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="copilot-approved" 
-                                                                   name="copilot_usage" type="checkbox" value="approved_only">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="copilot-approved">
-                                                                Only approved assistants
-                                    </label>
-                                </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="copilot-policy" 
-                                                                   name="copilot_usage" type="checkbox" value="with_policy">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="copilot-policy">
-                                                                Usage policy in place
-                                    </label>
-                                </div>
-                            </div>
-                        </fieldset>
+                                            <div class="govuk-radios__item">
+                                                <input class="govuk-radios__input" id="ai-basic" name="ai-usage" type="radio" value="basic">
+                                                <label class="govuk-label govuk-radios__label" for="ai-basic">
+                                                    Basic AI tools (e.g., ChatGPT, GitHub Copilot)
+                                                </label>
                                             </div>
-                    </div>
-
-                                        <!-- Approved Tools Section -->
-                                        <div class="govuk-checkboxes__item">
-                                            <input class="govuk-checkboxes__input" id="ai-approved-tools" 
-                                                   name="ai-approved-tools" type="checkbox" value="approved_tools"
-                                                   aria-controls="approved-tools-conditional"
-                                                   aria-expanded="false">
-                                            <label class="govuk-label govuk-checkboxes__label" for="ai-approved-tools">
-                                                Approved AI Tools/Services
-                                            </label>
-                                            <div class="govuk-hint govuk-checkboxes__hint">
-                                                Organization-approved AI tools and services
+                                            <div class="govuk-radios__item">
+                                                <input class="govuk-radios__input" id="ai-advanced" name="ai-usage" type="radio" value="advanced">
+                                                <label class="govuk-label govuk-radios__label" for="ai-advanced">
+                                                    Advanced AI (custom models, AI applications)
+                                                </label>
                                             </div>
-                                        </div>
-                                        <!-- Approved Tools Conditional -->
-                                        <div class="govuk-checkboxes__conditional govuk-checkboxes__conditional--hidden" 
-                                             id="approved-tools-conditional">
-                    <div class="govuk-form-group">
-                        <fieldset class="govuk-fieldset">
-                            <legend class="govuk-fieldset__legend">
-                                                        What types of approved AI tools are used?
-                            </legend>
-                                                    <div class="govuk-checkboxes govuk-checkboxes--small">
-                                <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="tools-analytics" 
-                                                                   name="ai_tools" type="checkbox" value="analytics">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="tools-analytics">
-                                                                Analytics and Insights
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="tools-automation" 
-                                                                   name="ai_tools" type="checkbox" value="automation">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="tools-automation">
-                                                                Process Automation
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="tools-security" 
-                                                                   name="ai_tools" type="checkbox" value="security">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="tools-security">
-                                                                Security and Monitoring
-                                    </label>
-                                </div>
-                                                    </div>
-                                                </fieldset>
-                                            </div>
-                                        </div>
-
-                                        <!-- ML Models Section -->
-                                        <div class="govuk-checkboxes__item">
-                                            <input class="govuk-checkboxes__input" id="ai-ml-models" 
-                                                   name="ai-ml-models" type="checkbox" value="ml_models"
-                                                   data-aria-controls="ml-models-conditional">
-                                            <label class="govuk-label govuk-checkboxes__label" for="ai-ml-models">
-                                                Custom Machine Learning Models
-                                            </label>
-                                            <div class="govuk-hint govuk-checkboxes__hint">
-                                                Development of custom ML models
-                                            </div>
-                                        </div>
-                                        <!-- ML Models Conditional -->
-                                        <div class="govuk-checkboxes__conditional" id="ml-models-conditional">
-                                            <div class="govuk-form-group">
-                                                <fieldset class="govuk-fieldset">
-                                                    <legend class="govuk-fieldset__legend">
-                                                        What type of ML models are developed?
-                                                    </legend>
-                                                    <div class="govuk-checkboxes govuk-checkboxes--small">
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ml-internal" 
-                                                                   name="ml_models" type="checkbox" value="internal">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ml-internal">
-                                                                Internal tools/processes
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ml-customer" 
-                                                                   name="ml_models" type="checkbox" value="customer">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ml-customer">
-                                                                Customer-facing features
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ml-research" 
-                                                                   name="ml_models" type="checkbox" value="research">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ml-research">
-                                                                Research and Development
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
-                                            </div>
-                                        </div>
-
-                                        <!-- AI Applications Section -->
-                                        <div class="govuk-checkboxes__item">
-                                            <input class="govuk-checkboxes__input" id="ai-applications" 
-                                                   name="ai-applications" type="checkbox" value="ai_applications"
-                                                   data-aria-controls="ai-applications-conditional">
-                                            <label class="govuk-label govuk-checkboxes__label" for="ai-applications">
-                                                AI-Based Applications
-                                            </label>
-                                            <div class="govuk-hint govuk-checkboxes__hint">
-                                                Applications with embedded AI capabilities
-                                            </div>
-                                        </div>
-                                        <!-- AI Applications Conditional -->
-                                        <div class="govuk-checkboxes__conditional" id="ai-applications-conditional">
-                                            <div class="govuk-form-group">
-                                                <fieldset class="govuk-fieldset">
-                                                    <legend class="govuk-fieldset__legend">
-                                                        What types of AI applications are used?
-                                                    </legend>
-                                                    <div class="govuk-checkboxes govuk-checkboxes--small">
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ai-app-internal" 
-                                                                   name="ai_applications" type="checkbox" value="internal">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ai-app-internal">
-                                                                Internal business applications
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ai-app-customer" 
-                                                                   name="ai_applications" type="checkbox" value="customer">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ai-app-customer">
-                                                                Customer-facing applications
-                                                            </label>
-                                                        </div>
-                                                        <div class="govuk-checkboxes__item">
-                                                            <input class="govuk-checkboxes__input" id="ai-app-embedded" 
-                                                                   name="ai_applications" type="checkbox" value="embedded">
-                                                            <label class="govuk-label govuk-checkboxes__label" for="ai-app-embedded">
-                                                                Embedded AI components
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </fieldset>
+                                            <div class="govuk-radios__item">
+                                                <input class="govuk-radios__input" id="ai-core" name="ai-usage" type="radio" value="core">
+                                                <label class="govuk-label govuk-radios__label" for="ai-core">
+                                                    AI is core to our business
+                                                </label>
                                             </div>
                                         </div>
                                     </div>
@@ -1052,117 +968,223 @@
             <div id="security-section" class="form-section" hidden>
                 <h1 class="govuk-heading-l">Security Controls</h1>
                 <form id="security-form" class="govuk-form-group">
+                    <!-- Application Security -->
                     <div class="govuk-form-group">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                                Current Security Measures
+                                Application Security
                             </legend>
                             
                             <div class="govuk-hint">
-                                Select all security controls currently implemented in your organisation
+                                Tell us about your application security controls
                             </div>
 
-                            <!-- Network Security -->
-                            <h3 class="govuk-heading-s">Network & Application Security</h3>
-                            <div class="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-ddos" 
-                                           name="security-ddos" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-ddos">
-                                        DDoS Protection
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-waf" 
-                                           name="security-waf" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-waf">
-                                        Web Application Firewall (WAF)
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-bot" 
-                                           name="security-bot" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-bot">
-                                        Bot Management
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-lb" 
-                                           name="security-lb" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-lb">
-                                        Load Balancing
-                                    </label>
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-waf">
+                                    Do you use a Web Application Firewall (WAF)?
+                                    <div class="govuk-hint">Protection against web application attacks</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-waf-yes" name="security-waf" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-waf-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-waf-no" name="security-waf" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-waf-no">No</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Access & Identity -->
-                            <h3 class="govuk-heading-s">Access & Identity</h3>
-                            <div class="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-vpn" 
-                                           name="security-vpn" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-vpn">
-                                        VPN/Zero Trust Network Access
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-ai-gateway" 
-                                           name="security-ai-gateway" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-ai-gateway">
-                                        AI Gateway
-                                    </label>
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-api">
+                                    Do you have API security controls?
+                                    <div class="govuk-hint">API gateway, authentication, rate limiting</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-api-yes" name="security-api" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-api-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-api-no" name="security-api" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-api-no">No</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Data & Content Security -->
-                            <h3 class="govuk-heading-s">Data & Content Security</h3>
-                            <div class="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-dlp" 
-                                           name="security-dlp" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-dlp">
-                                        Data Loss Protection
-                                    </label>
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-bot">
+                                    Do you use bot protection?
+                                    <div class="govuk-hint">Protection against automated attacks and bad bots</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-bot-yes" name="security-bot" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-bot-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-bot-no" name="security-bot" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-bot-no">No</label>
+                                    </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-phishing" 
-                                           name="security-phishing" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-phishing">
-                                        Phishing Protection
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-brand" 
-                                           name="security-brand" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-brand">
-                                        Brand Intelligence
-                                    </label>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- Network Security -->
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                Network Security
+                            </legend>
+                            
+                            <div class="govuk-hint">
+                                Tell us about your network security measures
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-ddos">
+                                    Do you have DDoS protection?
+                                    <div class="govuk-hint">Protection against denial of service attacks</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-ddos-yes" name="security-ddos" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-ddos-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-ddos-no" name="security-ddos" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-ddos-no">No</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Endpoint & Filtering -->
-                            <h3 class="govuk-heading-s">Endpoint & Filtering</h3>
-                            <div class="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-user-filter" 
-                                           name="security-user-filter" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-user-filter">
-                                        User Web Filtering
-                                    </label>
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-firewall">
+                                    Do you use next-generation firewalls?
+                                    <div class="govuk-hint">Advanced network traffic filtering and monitoring</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-firewall-yes" name="security-firewall" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-firewall-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-firewall-no" name="security-firewall" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-firewall-no">No</label>
+                                    </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-server-filter" 
-                                           name="security-server-filter" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-server-filter">
-                                        Server Web Filtering
-                                    </label>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- Identity Security -->
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                Identity Security
+                            </legend>
+                            
+                            <div class="govuk-hint">
+                                Tell us about your identity and access controls
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-mfa">
+                                    Do you enforce multi-factor authentication (MFA)?
+                                    <div class="govuk-hint">Required for all user accounts</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-mfa-yes" name="security-mfa" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-mfa-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-mfa-no" name="security-mfa" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-mfa-no">No</label>
+                                    </div>
                                 </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="security-endpoint" 
-                                           name="security-endpoint" type="checkbox" value="true">
-                                    <label class="govuk-label govuk-checkboxes__label" for="security-endpoint">
-                                        Endpoint Management
-                                    </label>
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-zerotrust">
+                                    Do you use Zero Trust/SASE security?
+                                    <div class="govuk-hint">Identity-based security model</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-zerotrust-yes" name="security-zerotrust" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-zerotrust-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-zerotrust-no" name="security-zerotrust" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-zerotrust-no">No</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- Data Security -->
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                Data Security
+                            </legend>
+                            
+                            <div class="govuk-hint">
+                                Tell us about your data protection measures
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-dlp">
+                                    Do you use Data Loss Prevention (DLP)?
+                                    <div class="govuk-hint">Controls to prevent data leakage</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-dlp-yes" name="security-dlp" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-dlp-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-dlp-no" name="security-dlp" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-dlp-no">No</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-encryption">
+                                    Do you use encryption for sensitive data?
+                                    <div class="govuk-hint">At rest and in transit</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-encryption-yes" name="security-encryption" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-encryption-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-encryption-no" name="security-encryption" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-encryption-no">No</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="govuk-form-group">
+                                <label class="govuk-label" for="security-backup">
+                                    Do you maintain secure backups?
+                                    <div class="govuk-hint">Regular backups with offline copies</div>
+                                </label>
+                                <div class="govuk-radios govuk-radios--inline">
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-backup-yes" name="security-backup" type="radio" value="true">
+                                        <label class="govuk-label govuk-radios__label" for="security-backup-yes">Yes</label>
+                                    </div>
+                                    <div class="govuk-radios__item">
+                                        <input class="govuk-radios__input" id="security-backup-no" name="security-backup" type="radio" value="false" checked>
+                                        <label class="govuk-label govuk-radios__label" for="security-backup-no">No</label>
+                                    </div>
                                 </div>
                             </div>
                         </fieldset>
@@ -1235,17 +1257,85 @@
                             </a>
                         </dd>
                     </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Organisation Name</dt>
+                        <dd class="govuk-summary-list__value" id="review-org-name"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Sector Type</dt>
+                        <dd class="govuk-summary-list__value" id="review-sector-type"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Industry</dt>
+                        <dd class="govuk-summary-list__value" id="review-industry"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Annual Revenue</dt>
+                        <dd class="govuk-summary-list__value" id="review-revenue"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Number of Employees</dt>
+                        <dd class="govuk-summary-list__value" id="review-employees"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Remote Working</dt>
+                        <dd class="govuk-summary-list__value" id="review-remote"></dd>
+                    </div>
 
-                    <!-- Exposure Details -->
+                    <!-- Risk Exposure -->
                     <div class="govuk-summary-list__row govuk-summary-list__row--header">
                         <dt class="govuk-summary-list__key govuk-heading-m">
-                            Exposure Assessment
+                            Risk Exposure
                         </dt>
                         <dd class="govuk-summary-list__actions">
                             <a class="govuk-link" href="#" data-section="exposure">
-                                Change<span class="govuk-visually-hidden"> Exposure Assessment</span>
+                                Change<span class="govuk-visually-hidden"> Risk Exposure</span>
                             </a>
                         </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Personal Data (PII)</dt>
+                        <dd class="govuk-summary-list__value" id="review-data-pii"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Payment Information</dt>
+                        <dd class="govuk-summary-list__value" id="review-data-payment"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Health Records</dt>
+                        <dd class="govuk-summary-list__value" id="review-data-health"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Financial Records</dt>
+                        <dd class="govuk-summary-list__value" id="review-data-financial"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Intellectual Property</dt>
+                        <dd class="govuk-summary-list__value" id="review-data-intellectual"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Public Websites</dt>
+                        <dd class="govuk-summary-list__value" id="review-asset-websites"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Public APIs</dt>
+                        <dd class="govuk-summary-list__value" id="review-asset-apis"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Mobile Applications</dt>
+                        <dd class="govuk-summary-list__value" id="review-asset-mobile"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Cloud Infrastructure</dt>
+                        <dd class="govuk-summary-list__value" id="review-infra-cloud"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">On-premises Data Centers</dt>
+                        <dd class="govuk-summary-list__value" id="review-infra-onprem"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">AI Usage</dt>
+                        <dd class="govuk-summary-list__value" id="review-ai-usage"></dd>
                     </div>
 
                     <!-- Security Controls -->
@@ -1259,14 +1349,57 @@
                             </a>
                         </dd>
                     </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Web Application Firewall (WAF)</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-waf"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">API Security Controls</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-api"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Bot Protection</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-bot"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">DDoS Protection</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-ddos"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Next-generation Firewalls</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-firewall"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Multi-factor Authentication (MFA)</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-mfa"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Zero Trust/SASE Security</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-zerotrust"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Data Loss Prevention (DLP)</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-dlp"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Data Encryption</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-encryption"></dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">Secure Backups</dt>
+                        <dd class="govuk-summary-list__value" id="review-security-backup"></dd>
+                    </div>
                 </dl>
+
+                <div class="govuk-form-group">
+                    <div class="cf-turnstile" 
+                         data-sitekey="0x4AAAAAABfrYMH-_9cGeJuB"
+                         data-callback="onTurnstileSuccess"></div>
+                </div>
 
                 <div class="govuk-button-group">
                     <button type="button" class="govuk-button govuk-button--secondary" data-action="back">
                         Back
-                    </button>
-                    <button type="button" class="govuk-button govuk-button--secondary" data-action="save-draft">
-                        Save as draft
                     </button>
                     <button type="button" class="govuk-button" data-action="submit">
                         Submit quote request

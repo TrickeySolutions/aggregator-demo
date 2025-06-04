@@ -1,5 +1,6 @@
 import { Env } from '../index';
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+import { handlePartnerQuote } from './partner-quotes';
 
 // Define the input parameters for the workflow
 export interface ActivitySubmissionParams {
@@ -129,4 +130,84 @@ export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, Activity
     }
 }
 
-export default ActivitySubmissionWorkflow; 
+export default ActivitySubmissionWorkflow;
+
+export async function handleActivitySubmission(env: Env, activityId: string, formData: any) {
+    console.log('[AS Function] Activity Submission Started');
+    
+    try {
+        // Get Activity DO
+        const activityDO = env.ACTIVITIES.get(
+            env.ACTIVITIES.idFromString(activityId)
+        );
+
+        // Update status to getting_quotes
+        await activityDO.fetch(new Request('http://localhost/api/update-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                status: 'getting_quotes'
+            })
+        }));
+
+        // Generate partner IDs
+        const partnerCount = Math.floor(Math.random() * (45 - 5 + 1)) + 5;
+        const partners = Array.from({ length: partnerCount }, () => 
+            crypto.randomUUID()
+        );
+
+        console.log(`[AS Function] Generated ${partners.length} partners`);
+
+        // Set expected partner count
+        await activityDO.fetch(new Request('http://localhost/api/update-state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                expectedPartnerCount: partners.length
+            })
+        }));
+
+        // Process partners in parallel
+        console.log('[AS Function] Starting to process partners:', partners);
+        const partnerPromises = partners.map(partnerId => {
+            const partnerParams = {
+                activityId,
+                partnerId,
+                quoteData: {
+                    partnerSpecificData: `Data for ${partnerId}`,
+                    formData
+                }
+            };
+            
+            console.log('[AS Function] Creating partner quote process for:', partnerId);
+            return handlePartnerQuote(env, partnerParams).catch(error => {
+                console.error(`[AS Function] Error processing partner ${partnerId}:`, error);
+                throw error;
+            });
+        });
+
+        console.log('[AS Function] Starting partner quote processing');
+        try {
+            await Promise.all(partnerPromises);
+            console.log('[AS Function] All partner quotes initiated successfully');
+        } catch (error) {
+            console.error('[AS Function] Error in partner processing:', error);
+            throw error;
+        }
+
+        return {
+            success: true,
+            activityId,
+            timestamp: Date.now(),
+            message: 'Activity submission processed successfully'
+        };
+    } catch (error) {
+        console.error('[AS Function] Error:', error);
+        return {
+            success: false,
+            activityId,
+            timestamp: Date.now(),
+            message: error.message
+        };
+    }
+} 
