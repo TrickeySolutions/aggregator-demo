@@ -332,7 +332,8 @@ export class PartnerDO {
                 }
             });
 
-            const logoUrl = `${this.env.PARTNER_LOGOS_URL}/${logoId}`;
+            // Use the worker path for logo URL
+            const logoUrl = `/partner-logos/${logoId}`;
             console.log('[PartnerDO] Logo generated and stored successfully:', logoUrl);
 
             return logoUrl;

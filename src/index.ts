@@ -39,6 +39,7 @@ export interface Env {
 		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
 	};
 	TURNSTILE_SECRET_KEY: string;
+	PARTNER_LOGOS: R2Bucket;
 }
 
 export default {
@@ -46,6 +47,28 @@ export default {
 		console.log('[index] TURNSTILE_SECRET_KEY present:', !!env.TURNSTILE_SECRET_KEY);
 		
 		const url = new URL(request.url);
+		
+		// Handle partner logo requests
+		if (url.pathname.startsWith('/partner-logos/')) {
+			const key = url.pathname.replace('/partner-logos/', '');
+			if (!key) {
+				return new Response('Not Found', { status: 404 });
+			}
+
+			const object = await env.PARTNER_LOGOS.get(key);
+			if (!object) {
+				return new Response('Not Found', { status: 404 });
+			}
+
+			const headers = new Headers();
+			object.writeHttpMetadata(headers);
+			headers.set('etag', object.httpEtag);
+			headers.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+
+			return new Response(object.body, {
+				headers,
+			});
+		}
 		
 		// API routes
 		if (url.pathname.startsWith('/api/')) {
