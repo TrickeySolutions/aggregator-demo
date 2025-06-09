@@ -14,32 +14,18 @@
 import { RiskProfile } from './types/risk-profile';
 import { handleActivitySubmission } from './workflows/activity-submission';
 import { handlePartnerQuote } from './workflows/partner-quotes';
-import { ActivitySubmissionMessage, PartnerQuoteMessage } from './types/messages';
-import { PartnerQuoteWorkflow } from './workflows/partner-quotes';
-
-// Queue message types
-interface QueueMessageData {
-	activityId: string;
-	formData: any;
-	partnerId?: string;
-	quoteData?: any;
-}
 
 export interface Env {
 	CUSTOMERS: DurableObjectNamespace;
 	ACTIVITIES: DurableObjectNamespace;
 	PARTNERS: DurableObjectNamespace;
 	ASSETS: Fetcher;
-	ACTIVITY: DurableObjectNamespace;
-	ACTIVITY_SUBMISSION_QUEUE: Queue;
-	PARTNER_QUOTES_QUEUE: Queue;
-	PARTNER_QUOTE_WORKFLOW: any;
-	ACTIVITY_SUBMISSION_WORKFLOW: any;
 	AI: {
-		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
+		run(model: string, options: any): Promise<{ response: string } | ReadableStream>;
 	};
 	TURNSTILE_SECRET_KEY: string;
 	PARTNER_LOGOS: R2Bucket;
+	AI_GATEWAY_ID?: string; // Optional gateway ID for AI Gateway configuration
 }
 
 export default {
@@ -146,49 +132,6 @@ export default {
 
 		// Serve other static assets
 		return env.ASSETS.fetch(request);
-	},
-
-	// Queue handler with correct typing
-	async queue(batch: MessageBatch<unknown>, env: Env, ctx: ExecutionContext): Promise<void> {
-		console.log('Queue consumer started, processing batch of:', batch.messages.length);
-		
-		for (const message of batch.messages) {
-			try {
-				const body = message.body as QueueMessageData;
-				
-				// Determine queue type from message content
-				if ('formData' in body && !('quoteData' in body)) {
-					console.log('Creating activity submission workflow');
-					ctx.waitUntil(
-						env.ACTIVITY_SUBMISSION_WORKFLOW.create({
-							params: {
-								activityId: body.activityId,
-								formData: body.formData
-							}
-						}).catch(error => console.error('Failed to create workflow:', error))
-					);
-				} else if ('quoteData' in body && 'partnerId' in body) {
-					// Instead of calling the function, create a workflow instance
-					console.log('Creating partner quote workflow');
-					ctx.waitUntil(
-						env.PARTNER_QUOTE_WORKFLOW.create({
-							params: {
-								activityId: body.activityId,
-								partnerId: body.partnerId,
-								quoteData: body.quoteData
-							}
-						}).catch(error => console.error('Failed to create workflow:', error))
-					);
-				} else {
-					console.error('Unknown message type:', body);
-					continue;
-				}
-				message.ack();
-			} catch (error) {
-				console.error('Failed to process message:', error);
-				message.retry();
-			}
-		}
 	}
 } satisfies ExportedHandler<Env>;
 
@@ -202,5 +145,3 @@ async function createNewCustomer(env: Env): Promise<string> {
 export { CustomerDO } from './durable_objects/customer';
 export { ActivityDO } from './durable_objects/activity';
 export { PartnerDO } from './durable_objects/partner';
-export { PartnerQuoteWorkflow } from './workflows/partner-quotes';
-export { ActivitySubmissionWorkflow } from './workflows/activity-submission';

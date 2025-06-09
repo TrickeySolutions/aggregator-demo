@@ -1,6 +1,19 @@
 /**
  * Risk Profile Type Definitions
  * 
+ * TODO: These types are currently not in use but are intended for future implementation to:
+ * - Add type safety to form data collection and validation
+ * - Implement structured risk scoring and assessment
+ * - Enforce consistent data shape for partner quote processing
+ * - Provide better TypeScript support for activity state management
+ * 
+ * Implementation Plan:
+ * 1. Update ActivityState interface to use these types for formData
+ * 2. Add runtime validation using these interfaces
+ * 3. Implement risk scoring based on SecurityPosture and IncidentHistory
+ * 4. Type partner quote responses using these interfaces
+ * 5. Add form validation against these type definitions
+ * 
  * Defines the structure for risk assessment and profile calculation
  */
 

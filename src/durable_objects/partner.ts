@@ -149,26 +149,30 @@ export class PartnerDO {
                 throw new Error('AI binding not available');
             }
 
+            const aiOptions: any = {
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a creative assistant that generates plausible insurance company names."
+                    },
+                    {
+                        role: "user",
+                        content: "Generate a single plausible name for an insurance company. Only return the name, no explanation or additional text."
+                    }
+                ]
+            };
+
+            // Only include gateway configuration if AI_GATEWAY_ID is set
+            if (this.env.AI_GATEWAY_ID) {
+                aiOptions.gateway = {
+                    id: this.env.AI_GATEWAY_ID
+                };
+            }
+
             const response = await this.retryOnRateLimit(() => 
                 this.env.AI.run(
                     "@cf/meta/llama-2-7b-chat-int8",
-                    {
-                        messages: [
-                            {
-                                role: "system",
-                                content: "You are a creative assistant that generates plausible insurance company names."
-                            },
-                            {
-                                role: "user",
-                                content: "Generate a single plausible name for an insurance company. Only return the name, no explanation or additional text."
-                            }
-                        ]
-                    },
-                    {
-                        gateway: {
-                            id: "aggregator-demo-gateway"
-                        }
-                    }
+                    aiOptions
                 )
             );
 
@@ -202,7 +206,7 @@ export class PartnerDO {
                 type: error instanceof Error ? error.constructor.name : typeof error,
                 stack: error instanceof Error ? error.stack : undefined,
                 aiBinding: !!this.env.AI,
-                gatewayId: "aggregator-demo-gateway"
+                gatewayId: this.env.AI_GATEWAY_ID || "aggregator-demo-gateway"
             };
             
             console.error('[PartnerDO] Name generation failed:', errorDetails);
@@ -263,23 +267,27 @@ export class PartnerDO {
         try {
             console.log('[PartnerDO] Starting logo generation for:', partnerName);
             
+            const aiOptions: any = {
+                prompt: `Professional minimalist business logo for "${partnerName}", a ${characteristics.specialization} insurance company. 
+                    Style: ${characteristics.brandTone > 7 ? 'modern and playful' : 'corporate and serious'}, 
+                    Brand Authority: ${characteristics.brandAuthority}/10. 
+                    Clean vector style, suitable for both dark and light backgrounds.`,
+                num_steps: 20,
+                width: 256,
+                height: 256
+            };
+
+            // Only include gateway configuration if AI_GATEWAY_ID is set
+            if (this.env.AI_GATEWAY_ID) {
+                aiOptions.gateway = {
+                    id: this.env.AI_GATEWAY_ID
+                };
+            }
+
             const response = await this.retryOnRateLimit(() => 
                 this.env.AI.run(
                     '@cf/black-forest-labs/flux-1-schnell',
-                    {
-                        prompt: `Professional minimalist business logo for "${partnerName}", a ${characteristics.specialization} insurance company. 
-                            Style: ${characteristics.brandTone > 7 ? 'modern and playful' : 'corporate and serious'}, 
-                            Brand Authority: ${characteristics.brandAuthority}/10. 
-                            Clean vector style, suitable for both dark and light backgrounds.`,
-                        num_steps: 20,
-                        width: 256,
-                        height: 256
-                    },
-                    {
-                        gateway: {
-                            id: "aggregator-demo-gateway"
-                        }
-                    }
+                    aiOptions
                 )
             );
 
