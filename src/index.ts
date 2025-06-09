@@ -21,10 +21,11 @@ export interface Env {
 	PARTNERS: DurableObjectNamespace;
 	ASSETS: Fetcher;
 	AI: {
-		run(model: string, options: { messages: { role: string; content: string; }[] }): Promise<{ response: string }>;
+		run(model: string, options: any): Promise<{ response: string } | ReadableStream>;
 	};
 	TURNSTILE_SECRET_KEY: string;
 	PARTNER_LOGOS: R2Bucket;
+	AI_GATEWAY_ID?: string; // Optional gateway ID for AI Gateway configuration
 }
 
 export default {
