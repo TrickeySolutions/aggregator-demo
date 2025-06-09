@@ -63,48 +63,6 @@
 			"new_classes": ["CustomerDO", "ActivityDO", "PartnerDO"]
 		}
 	],
-	"queues": {
-		"producers": [
-			{
-				"binding": "ACTIVITY_SUBMISSION_QUEUE",
-				"queue": "activity-submission"
-			},
-			{
-				"binding": "PARTNER_QUOTES_QUEUE",
-				"queue": "partner-quotes"
-			}
-		],
-		"consumers": [
-			{
-				"queue": "activity-submission",
-				"max_batch_size": 1,
-				"max_batch_timeout": 1,
-				"max_retries": 3,
-				"dead_letter_queue": "activity-submission-dlq",
-				"retry_delay": 0
-			},
-			{
-				"queue": "partner-quotes",
-				"max_batch_size": 1,
-				"max_batch_timeout": 1,
-				"max_retries": 3,
-				"dead_letter_queue": "partner-quotes-dlq",
-				"retry_delay": 0
-			}
-		]
-	},
-	"workflows": [
-		{
-			"name": "partner-quote",
-			"binding": "PARTNER_QUOTE_WORKFLOW",
-			"class_name": "PartnerQuoteWorkflow"
-		},
-		{
-			"name": "activity-submission",
-			"binding": "ACTIVITY_SUBMISSION_WORKFLOW",
-			"class_name": "ActivitySubmissionWorkflow"
-		}
-	],
 	"r2_buckets": [
 		{
 			"binding": "PARTNER_LOGOS",

@@ -1,138 +1,18 @@
-import { Env } from '../index';
-import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { handlePartnerQuote } from './partner-quotes';
+import { Env } from '../index';
 
-// Define the input parameters for the workflow
-export interface ActivitySubmissionParams {
-    activityId: string;
-    formData: any;
-}
-
-// Define the result type
-export interface ActivitySubmissionResult {
+interface ActivitySubmissionResult {
     success: boolean;
     activityId: string;
     timestamp: number;
-    message?: string;
+    message: string;
 }
 
-export class ActivitySubmissionWorkflow extends WorkflowEntrypoint<Env, ActivitySubmissionParams> {
-    async run(event: WorkflowEvent<ActivitySubmissionParams>, step: WorkflowStep): Promise<ActivitySubmissionResult> {
-        const { activityId, formData } = event.payload;
-        console.log('[AS Workflow] Activity Submission Started');
-
-        // Step 1: Validate Submission Data
-        const validationResult = await step.do(
-            'validate-submission',
-            {
-                retries: { limit: 2, delay: '3 seconds', backoff: 'exponential' }
-            },
-            async () => {
-                console.log('[AS Workflow] Step 1: Validating submission data...');
-                return !!formData && typeof formData === 'object';
-            }
-        );
-
-        // Update status to getting_quotes immediately after validation
-        await step.do(
-            'update-status',
-            {
-                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
-            },
-            async () => {
-                const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
-                const activityDO = this.env.ACTIVITIES.get(activityId);
-                
-                await activityDO.fetch(new Request('http://dummy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        status: 'getting_quotes'
-                    })
-                }));
-                return true;
-            }
-        );
-
-        // Step 2: Get Partners and queue them
-        //pick a random number of aprtners between 5 and 100 to send quotes to
-        const partnerCount = Math.floor(Math.random() * (45 - 5 + 1)) + 5; // Random number between 5 and 100
-        const partners = Array.from({ length: partnerCount }, () => 
-            crypto.randomUUID() // Generates a GUID/UUID
-        );
-        
-        // Set expected partner count before queueing
-        await step.do(
-            'set-partner-count',
-            {
-                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
-            },
-            async () => {
-                const activityId = this.env.ACTIVITIES.idFromString(event.payload.activityId);
-                const activityDO = this.env.ACTIVITIES.get(activityId);
-                
-                await activityDO.fetch(new Request('http://dummy/api/update-state', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        expectedPartnerCount: partners.length
-                    })
-                }));
-                return true;
-            }
-        );
-
-        // Process partners with direct workflow creation and queue fallback
-        await step.do(
-            'process-partners',
-            {
-                retries: { limit: 2, delay: '1 second', backoff: 'exponential' }
-            },
-            async () => {
-                // Create all workflows in parallel
-                const promises = partners.map(partnerId => {
-                    const partnerParams = {
-                        activityId: event.payload.activityId,
-                        partnerId,
-                        quoteData: {
-                            partnerSpecificData: `Data for ${partnerId}`,
-                            formData: event.payload.formData
-                        }
-                    };
-                    
-                    return this.ctx.waitUntil((async () => {
-                        try {
-                            // Try direct workflow creation first
-                            await this.env.PARTNER_QUOTE_WORKFLOW.create({
-                                params: partnerParams
-                            });
-                            console.log(`[AS Workflow] Created workflow for partner ${partnerId}`);
-                        } catch (error) {
-                            // Fall back to queue if direct creation fails
-                            console.log(`[AS Workflow] Falling back to queue for ${partnerId}:`, error);
-                            await this.env.PARTNER_QUOTES_QUEUE.send(partnerParams);
-                        }
-                    })());
-                });
-
-                // Wait for all partners to be processed
-                await Promise.all(promises);
-                return true;
-            }
-        );
-
-        return {
-            success: true,
-            activityId,
-            timestamp: Date.now(),
-            message: 'Activity submission processed successfully'
-        };
-    }
-}
-
-export default ActivitySubmissionWorkflow;
-
-export async function handleActivitySubmission(env: Env, activityId: string, formData: any) {
+export async function handleActivitySubmission(
+    env: Env, 
+    activityId: string, 
+    formData: Record<string, unknown>
+): Promise<ActivitySubmissionResult> {
     console.log('[AS Function] Activity Submission Started');
     
     try {
@@ -142,7 +22,7 @@ export async function handleActivitySubmission(env: Env, activityId: string, for
         );
 
         // Update status to getting_quotes
-        await activityDO.fetch(new Request('http://localhost/api/update-quote', {
+        await activityDO.fetch(new Request('http://dummy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -156,10 +36,8 @@ export async function handleActivitySubmission(env: Env, activityId: string, for
             crypto.randomUUID()
         );
 
-        console.log(`[AS Function] Generated ${partners.length} partners`);
-
         // Set expected partner count
-        await activityDO.fetch(new Request('http://localhost/api/update-state', {
+        await activityDO.fetch(new Request('http://dummy/api/update-state', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -168,7 +46,6 @@ export async function handleActivitySubmission(env: Env, activityId: string, for
         }));
 
         // Process partners in parallel
-        console.log('[AS Function] Starting to process partners:', partners);
         const partnerPromises = partners.map(partnerId => {
             const partnerParams = {
                 activityId,
@@ -179,21 +56,11 @@ export async function handleActivitySubmission(env: Env, activityId: string, for
                 }
             };
             
-            console.log('[AS Function] Creating partner quote process for:', partnerId);
-            return handlePartnerQuote(env, partnerParams).catch(error => {
-                console.error(`[AS Function] Error processing partner ${partnerId}:`, error);
-                throw error;
-            });
+            return handlePartnerQuote(env, partnerParams);
         });
 
-        console.log('[AS Function] Starting partner quote processing');
-        try {
-            await Promise.all(partnerPromises);
-            console.log('[AS Function] All partner quotes initiated successfully');
-        } catch (error) {
-            console.error('[AS Function] Error in partner processing:', error);
-            throw error;
-        }
+        // Wait for all partner processes to start
+        await Promise.all(partnerPromises);
 
         return {
             success: true,
@@ -207,7 +74,7 @@ export async function handleActivitySubmission(env: Env, activityId: string, for
             success: false,
             activityId,
             timestamp: Date.now(),
-            message: error.message
+            message: error instanceof Error ? error.message : 'Unknown error'
         };
     }
 } 
