@@ -493,6 +493,53 @@
             border-left: 5px solid #d4351c;
             padding-left: 15px;
         }
+
+        /* Hide sample data button when org name is not empty */
+        #organisation-form:has(#name:not(:placeholder-shown)) .govuk-button[data-action="fill-sample"] {
+            visibility: hidden;
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Style the organization name input group */
+        .org-name-group {
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .org-name-group .govuk-form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .org-name-group .govuk-button {
+            margin: 0;
+            min-width: max-content;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Responsive styling for mobile */
+        @media (max-width: 40.0625em) {
+            .org-name-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .org-name-group .govuk-button {
+                width: auto;
+                align-self: flex-start;
+                margin-top: 10px;
+            }
+
+            /* Collapse space when button is hidden on mobile */
+            #organisation-form:has(#name:not(:placeholder-shown)) .org-name-group {
+                margin-bottom: 0;
+            }
+        }
     </style>
 </head>
 <body class="govuk-template__body">
@@ -566,11 +613,16 @@
             <div id="organisation-section" class="form-section">
                 <h1 class="govuk-heading-l">Organisation Details</h1>
                 <form id="organisation-form" class="govuk-form-group">
-                    <div class="govuk-form-group">
-                        <label class="govuk-label" for="name">
-                            Organisation name
-                        </label>
-                        <input class="govuk-input" id="name" name="name" type="text" required>
+                    <div class="org-name-group">
+                        <div class="govuk-form-group">
+                            <label class="govuk-label govuk-fieldset__legend govuk-fieldset__legend--m" for="name">
+                                Organisation name
+                            </label>
+                            <input class="govuk-input" id="name" name="name" type="text" required placeholder="Enter organisation name">
+                        </div>
+                        <button type="button" class="govuk-button govuk-button--secondary" data-action="fill-sample">
+                            Fill with sample data
+                        </button>
                     </div>
 
                     <div class="govuk-form-group">

@@ -99,6 +99,26 @@ class QuoteForm {
                 }
             });
         });
+
+        // Add sample data button handler
+        const sampleButton = document.querySelector('[data-action="fill-sample"]');
+        if (sampleButton) {
+            sampleButton.addEventListener('click', async () => {
+                try {
+                    this.showLoading(true);
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: 'fill_sample'
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Failed to fill sample data:', error);
+                    this.showError('Error', 'Failed to fill sample data. Please try again.');
+                } finally {
+                    this.showLoading(false);
+                }
+            });
+        }
     }
 
     setupLoadingIndicator() {

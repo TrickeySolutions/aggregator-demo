@@ -178,6 +178,30 @@ export class ActivityDO {
                             ws.send(update);
                         }
                     });
+                } else if (data.type === 'fill_sample') {
+                    try {
+                        const sampleData = await this.generateSampleData();
+                        this.activityState.formData = sampleData;
+                        await this.updateState(this.activityState);
+                        
+                        // Broadcast to all clients
+                        const update = JSON.stringify({
+                            type: 'state_update',
+                            state: this.activityState
+                        });
+
+                        this.sessions.forEach(ws => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(update);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Sample data generation error:', error);
+                        server.send(JSON.stringify({
+                            type: 'error',
+                            message: 'Failed to generate sample data'
+                        }));
+                    }
                 } else if (data.type === 'submit') {
                     try {
                         // Pass the execution context to handleSubmit
@@ -424,5 +448,67 @@ export class ActivityDO {
     });
 
     return { success: true };
+  }
+
+  private async generateSampleData(): Promise<any> {
+    try {
+        // Generate a company name using AI
+        const aiResponse = await this.env.AI.run(
+            "@cf/meta/llama-2-7b-chat-int8",
+            {
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a creative assistant that generates plausible company names."
+                    },
+                    {
+                        role: "user",
+                        content: "Generate a single company name for a medium-sized technology company. Only return the name, no explanation or additional text."
+                    }
+                ]
+            }
+        );  
+
+        const companyName = aiResponse.response.trim();
+
+        return {
+            organisation: {
+                name: companyName,
+                'sector-type': 'private',
+                industry: 'technology',
+                revenue: '500000',
+                employees: '251-500',
+                remote_percentage: '50'
+            },
+            exposure: {
+                'data-pii': true,
+                'data-payment': false,
+                'data-health': false,
+                'data-financial': false,
+                'data-intellectual': true,
+                'asset-websites': true,
+                'asset-apis': false,
+                'asset-mobile': false,
+                'infra-cloud': true,
+                'infra-onprem': false,
+                'ai-usage': 'core'
+            },
+            security: {
+                'security-waf': true,
+                'security-api': false,
+                'security-bot': true,
+                'security-ddos': true,
+                'security-firewall': true,
+                'security-mfa': true,
+                'security-zerotrust': false,
+                'security-dlp': false,
+                'security-encryption': true,
+                'security-backup': true
+            }
+        };
+    } catch (error) {
+        console.error('[ActivityDO] Error generating sample data:', error);
+        throw error;
+    }
   }
 } 
