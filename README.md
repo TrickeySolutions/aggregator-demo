@@ -4,7 +4,7 @@ A demonstration web application for a cyber insurance comparison service.
  
 It can be used to demonstrate a wide variety Cloudflare developer platform features 
 At the core of this application is a fan-in fan-out architecture that scatters the risk profiles to many potential insruance prviders and then gatehrs the results for aggregation.
-The applciation also leverages AI inference to genreate 
+The applciation leverages AI inference to genreate brand identities for the dummy insurance partners
   
 
 🚀 **<a href="https://compare.trickey.solutions" target="_blank">View Live Demo</a>** - See the application in action with a fully deployed example.
@@ -25,25 +25,25 @@ The applciation also leverages AI inference to genreate
 
 - Multi-step quote generation process
 - Real-time form validation and state synchronization
-- Persistent state management
+- Persistent state management with Durable Objects
 - Progress tracking
-- Asynchronous quote processing with multiple partners
+- Asynchronous quote processing with AI-generated partners
 - Real-time quote status updates
 - Auto-save draft functionality
 - Session management
 - Activity timeout handling
 - Responsive design
 - Accessible interface
+- Optional AI Gateway integration for analytics and monitoring
+- Optional Turnstyle bot protection
 
 ## Technology Stack
 
 - Cloudflare Workers
 - Durable Objects
-- Cloudflare Queues
-- Cloudflare Workflows
 - Cloudflare R2 Storage
-- Cloudflare AI Gateway
-- Cloudflare Workers AI Inferance
+- Workers AI (LLM Inferance)
+- Optional: Cloudflare AI Gateway
 - Cloudflare Turnstile
 - TypeScript
 - GOV.UK Design System
@@ -51,7 +51,7 @@ The applciation also leverages AI inference to genreate
 ## Prerequisites
 
 - Cloudflare Workers account (https://dash.cloudflare.com/sign-up/workers)
-
+- Cloudflare Turnstyle site key + secret (https://developers.cloudflare.com/turnstile/get-started/#get-a-sitekey-and-secret-key)
 <details>
 <summary>Optional: Local Development Prereqisites}</summary>
 
@@ -77,39 +77,40 @@ The Deploy to Cloudflare button will automatically:
 
 ### Configure Environment Variables
 
-Create a `.dev.vars` file in your project root with the following variables:
+Create a `.dev.vars` file in your project root with the following required variables:
 ```
 TURNSTILE_SITE_KEY=your_site_key_here
 TURNSTILE_SECRET_KEY=your_secret_key_here
-PARTNER_LOGOS_URL=your_r2_bucket_url
+```
+
+Optional environment variables for enhanced functionality:
+```
+AI_GATEWAY_ID=your_gateway_id_here  # Enable AI Gateway features like analytics and logging
 ```
 
 For production, you can set the variables either through the Dashboard UI or using wrangler commands:
 
 ```bash
-# Using wrangler to set secrets
+# Required secrets
 wrangler secret put TURNSTILE_SITE_KEY
 wrangler secret put TURNSTILE_SECRET_KEY
-wrangler secret put PARTNER_LOGOS_URL
+
+# Optional: Enable AI Gateway features
+wrangler secret put AI_GATEWAY_ID
 ```
 
-Alternatively, via the Cloudflare Dashboard:
+<Details> 
+<summary>Alternatively, via the Cloudflare Dashboard:</summary>
+
 1. Go to Workers & Pages
 2. Select your application
 3. Go to Settings > Environment Variables
-4. Add the same variables as above
+4. Add the variables as above
 
+</details>
 ## Manual Setup
 
-If you prefer to set up the project manually instead of using the Deploy button, you'll need to create the following resources yourself:
-
-#### Create Cloudflare Queues
-```bash
-npx wrangler queues create activity-submission
-npx wrangler queues create partner-quotes
-npx wrangler queues create activity-submission-dlq
-npx wrangler queues create partner-quotes-dlq
-```
+If you prefer to set up the project manually instead of using the Deploy button, you'll need to create the following resources:
 
 #### Create R2 Bucket
 ```bash
@@ -117,15 +118,23 @@ npx wrangler r2 bucket create partner-logos
 npx wrangler r2 bucket create partner-logos-dev
 ```
 
-#### Set up Cloudflare AI Gateway
-1. Go to Cloudflare Dashboard > AI
-2. Create a new AI Gateway named `aggregator-demo-gateway`
-3. Note down the Gateway ID
-
-#### Set up Cloudflare Turnstile
+#### Set up Cloudflare Turnstile (Required)
 1. Go to Cloudflare Dashboard > Security > Turnstile
 2. Create a new site widget
 3. Note down the Site Key and Secret Key
+
+#### Set up Cloudflare AI Gateway (Optional)
+For enhanced AI features like analytics, logging, and caching:
+1. Go to Cloudflare Dashboard > AI
+2. Create a new AI Gateway
+3. Note down the Gateway ID and set it as the `AI_GATEWAY_ID` environment variable
+
+The application will work without AI Gateway, but setting it up provides:
+- Real-time analytics for AI model usage
+- Request/response logging
+- Caching capabilities
+- Rate limiting controls
+- Cost monitoring
 
 ## Local Development
 
@@ -134,14 +143,16 @@ npx wrangler r2 bucket create partner-logos-dev
 npm install
 ```
 
-2. Set up GOV.UK Frontend assets:
-```bash
-npm run setup-govuk
-```
-
-3. Start development server:
+2. Start development server:
 ```bash
 npm run dev
+```
+
+## Deployment
+
+Deploy to Cloudflare Workers:
+```bash
+npm run deploy
 ```
 
 ## Project Structure
@@ -158,34 +169,6 @@ npm run dev
 └── scripts/            # Build and setup scripts
 ```
 
-## User Flow
-
-1. User clicks "Get a Quote" on the home page
-2. System creates new customer and activity
-3. User completes multi-step quote form
-4. On submission:
-   - Form data is saved - user is redirected to a results page
-   - Users activity profile is asynch sent to AI Generated Partners
-   - Partners process activities requests asynchronously and offer quotes
-   - Quote Results are aggregated in real-time as as they arrive
-5. User can compare offers to choose which quote to accept
-
-## Technical Implementation
-
-- Uses Durable Objects for persistent state management
-- WebSocket connections for real-time updates
-- Queue-based processing for partner integrations
-- TypeScript for type safety
-- Error handling and timeout management
-- Activity state machine (draft → processing → getting_quotes → completed)
-
-## Deployment
-
-Deploy to Cloudflare Workers:
-```bash
-npm run deploy
-```
-
 ## Contributing
 
 1. Fork the repository
@@ -199,6 +182,6 @@ npm run deploy
 If you encounter any issues during setup:
 
 1. Verify all Cloudflare services are properly created and configured
-2. Check that all environment variables are set correctly
+2. Check that all environment variables are set correctly (use dev.vars file locally and secrets when deployed)
 3. Ensure your Cloudflare account has access to all required services (Workers, R2, AI Gateway, etc.)
 4. Check the Workers logs in the Cloudflare Dashboard for any error messages
